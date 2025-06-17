@@ -1,0 +1,53 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "email": "test@example.com",
+      "password": "$2a$10$bAN9rz6xCEcmtnjlAOycbOl8Z3augXDKECblZZijw46KztbcK980.",
+      "name": "Test User",
+      "createdAt": "2025-06-16T08:33:27.466Z"
+    }
+  ],
+  "jars": [
+    {
+      "id": "1",
+      "userId": "1",
+      "name": "Emergency Fund",
+      "targetAmount": 10000,
+      "balance": 5000,
+      "description": "For unexpected expenses",
+      "createdAt": "2024-03-15T00:00:00.000Z",
+      "updatedAt": "2024-03-15T00:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "name": "Vacation Fund",
+      "targetAmount": 5000,
+      "balance": 2000,
+      "description": "For summer vacation",
+      "createdAt": "2024-03-15T00:00:00.000Z",
+      "updatedAt": "2024-03-15T00:00:00.000Z"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "1",
+      "jarId": "1",
+      "amount": 1000,
+      "type": "income",
+      "description": "Monthly salary",
+      "category": "Salary",
+      "date": "2024-03-15T00:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "jarId": "1",
+      "amount": 500,
+      "type": "expense",
+      "description": "Car repair",
+      "category": "Transportation",
+      "date": "2024-03-16T00:00:00.000Z"
+    }
+  ]
+}
