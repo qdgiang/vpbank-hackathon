@@ -1,3 +1,4 @@
+# Lambda security group and IAM role
 resource "aws_security_group" "lambda" {
   name        = "${var.project_name}-lambda-sg"
   description = "Security group for Lambda function"
@@ -60,56 +61,58 @@ resource "aws_iam_role_policy" "lambda_rds_access" {
   })
 }
 
-
-resource "null_resource" "query_lambda_layer" {
+# Lambda layer for query_test function
+resource "null_resource" "query_test_lambda_layer" {
   triggers = {
-    requirements = filebase64("${path.module}/../lambda/query/requirements.txt")
+    requirements = filebase64("${path.module}/../lambda/query_test/requirements.txt")
   }
 
   provisioner "local-exec" {
     command = <<EOF
-      rm -rf ${path.module}/../lambda/query/layer
-      mkdir -p ${path.module}/../lambda/query/layer/python
-      pip install -r ${path.module}/../lambda/query/requirements.txt -t ${path.module}/../lambda/query/layer/python
+      rm -rf ${path.module}/../lambda/query_test/layer
+      mkdir -p ${path.module}/../lambda/query_test/layer/python
+      pip install -r ${path.module}/../lambda/query_test/requirements.txt -t ${path.module}/../lambda/query_test/layer/python
     EOF
   }
 }
 
-data "archive_file" "query_lambda_layer_zip" {
+data "archive_file" "query_test_lambda_layer_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../lambda/query/layer"
-  output_path = "${path.module}/../lambda/query/lambda-layer.zip"
+  source_dir  = "${path.module}/../lambda/query_test/layer"
+  output_path = "${path.module}/../lambda/query_test/lambda-layer.zip"
   
-  depends_on = [null_resource.query_lambda_layer]
+  depends_on = [null_resource.query_test_lambda_layer]
 }
 
-resource "aws_lambda_layer_version" "query_python_packages_layer" {
-  filename            = data.archive_file.query_lambda_layer_zip.output_path
-  layer_name          = "${var.project_name}-query-python-packages-layer"
+resource "aws_lambda_layer_version" "query_test_python_packages_layer" {
+  filename            = data.archive_file.query_test_lambda_layer_zip.output_path
+  layer_name          = "${var.project_name}-query-test-python-packages-layer"
   compatible_runtimes = ["python3.9"]
-  source_code_hash    = data.archive_file.query_lambda_layer_zip.output_base64sha256
+  source_code_hash    = data.archive_file.query_test_lambda_layer_zip.output_base64sha256
 
-  description = "Python packages layer for query function"
+  description = "Python packages layer for query_test function"
   
-  depends_on = [null_resource.query_lambda_layer]
+  depends_on = [null_resource.query_test_lambda_layer]
 }
 
-data "archive_file" "lambda_zip" {
+# Lambda function code archive
+data "archive_file" "query_test_lambda_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../lambda/query"
-  output_path = "${path.module}/../lambda/query/lambda.zip"
-  excludes    = ["requirements.txt"]
+  source_dir  = "${path.module}/../lambda/query_test"
+  output_path = "${path.module}/../lambda/query_test/lambda.zip"
+  excludes    = ["requirements.txt", "layer/"]
 }
 
-resource "aws_lambda_function" "transaction_query" {
-  filename         = data.archive_file.lambda_zip.output_path
-  function_name    = "${var.project_name}-transaction-query"
+# Lambda function
+resource "aws_lambda_function" "query_test" {
+  filename         = data.archive_file.query_test_lambda_zip.output_path
+  function_name    = "${var.project_name}-query-test"
   role            = aws_iam_role.lambda_execution.arn
   handler         = "index.handler"
   runtime         = "python3.9"
   timeout         = 30
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
-  layers          = [aws_lambda_layer_version.query_python_packages_layer.arn]
+  source_code_hash = data.archive_file.query_test_lambda_zip.output_base64sha256
+  layers          = [aws_lambda_layer_version.query_test_python_packages_layer.arn]
 
   vpc_config {
     subnet_ids         = aws_subnet.private[*].id
@@ -118,8 +121,8 @@ resource "aws_lambda_function" "transaction_query" {
 
   environment {
     variables = {
-      DB_HOST     = aws_db_instance.mysql.endpoint
-      DB_PORT     = tostring(aws_db_instance.mysql.port)
+      DB_HOST     = aws_db_instance.mysql.address
+      DB_PORT     = aws_db_instance.mysql.port
       DB_NAME     = aws_db_instance.mysql.db_name
       DB_USER     = aws_db_instance.mysql.username
       DB_PASSWORD = var.db_password
@@ -127,6 +130,6 @@ resource "aws_lambda_function" "transaction_query" {
   }
 
   tags = {
-    Name = "${var.project_name}-transaction-query"
+    Name = "${var.project_name}-query-test"
   }
 }
