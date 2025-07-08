@@ -39,14 +39,48 @@ output "rds_security_group_id" {
   value       = aws_security_group.rds.id
 }
 
-output "lambda_function_name" {
-  description = "Lambda function name"
-  value       = aws_lambda_function.transaction_query.function_name
+# Query Test Lambda outputs
+output "query_test_lambda_name" {
+  description = "Query Test Lambda function name"
+  value       = aws_lambda_function.query_test.function_name
 }
 
-output "lambda_function_arn" {
-  description = "Lambda function ARN"
-  value       = aws_lambda_function.transaction_query.arn
+output "query_test_lambda_arn" {
+  description = "Query Test Lambda function ARN"
+  value       = aws_lambda_function.query_test.arn
+}
+
+# Query Transaction Lambda outputs
+output "query_transaction_lambda_name" {
+  description = "Query Transaction Lambda function name"
+  value       = aws_lambda_function.query_transaction.function_name
+}
+
+output "query_transaction_lambda_arn" {
+  description = "Query Transaction Lambda function ARN"
+  value       = aws_lambda_function.query_transaction.arn
+}
+
+# Query Jar Lambda outputs
+output "query_jar_lambda_name" {
+  description = "Query Jar Lambda function name"
+  value       = aws_lambda_function.query_jar.function_name
+}
+
+output "query_jar_lambda_arn" {
+  description = "Query Jar Lambda function ARN"
+  value       = aws_lambda_function.query_jar.arn
+}
+
+# Query Notification Lambda outputs
+output "query_notification_lambda_name" {
+  description = "Query Notification Lambda function name"
+  value       = aws_lambda_function.query_notification.function_name
+}
+
+output "query_notification_lambda_arn" {
+  description = "Query Notification Lambda function ARN"
+  value       = aws_lambda_function.query_notification.arn
 }
 
 output "lambda_role_arn" {
