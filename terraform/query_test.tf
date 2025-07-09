@@ -95,6 +95,13 @@ resource "aws_lambda_layer_version" "query_test_python_packages_layer" {
   depends_on = [null_resource.query_test_lambda_layer]
 }
 
+# Null resource to control lambda updates based on source file changes
+resource "null_resource" "query_test_lambda_source_hash" {
+  triggers = {
+    source_code = filebase64("${path.module}/../lambda/query_test/index.py")
+  }
+}
+
 # Lambda function code archive
 data "archive_file" "query_test_lambda_zip" {
   type        = "zip"
@@ -111,7 +118,7 @@ resource "aws_lambda_function" "query_test" {
   handler         = "index.handler"
   runtime         = "python3.9"
   timeout         = 30
-  source_code_hash = data.archive_file.query_test_lambda_zip.output_base64sha256
+  source_code_hash = null_resource.query_test_lambda_source_hash.triggers.source_code
   layers          = [aws_lambda_layer_version.query_test_python_packages_layer.arn]
 
   vpc_config {

@@ -6,6 +6,14 @@ terraform {
       version = "~> 5.0"
     }
   }
+  
+  backend "s3" {
+    bucket         = "smart-jarvis-terraform-state-zf8c8n55"
+    key            = "terraform.tfstate"
+    region         = "ap-southeast-2"
+    use_lockfile   = true
+    dynamodb_table = "smart-jarvis-terraform-state-lock"
+  }
 }
 
 provider "aws" {
