@@ -2,6 +2,20 @@
 
 # dependencies
 node_modules
+.secrets
+terraform.tfstate.backup
+*.tfstate
+*.tfstate.*
+.terraform
+.terraform.lock.hcl
+*.tfvars
+*.tfvars.json
+*.tfplan
+*.tfplan.json
+*.zip
+*.tar.gz
+*.tgz
+*.tar
 /.pnp
 .pnp.js
 
@@ -12,6 +26,10 @@ node_modules
 build
 
 # misc
+# Lambda layer dependencies
+lambda/*/layer/
+lambda/**/layer/
+lambda/**/*layer*.zip
 .DS_Store
 .env
 .env.local
