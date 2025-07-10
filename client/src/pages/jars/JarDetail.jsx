@@ -189,6 +189,7 @@ const JarDetail = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
+            sx={{ borderRadius: 2, fontWeight: 'bold', px: 2, py: 0.5, minWidth: 0 }}
           >
             Add Transaction
           </Button>

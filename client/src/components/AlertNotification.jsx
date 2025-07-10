@@ -5,15 +5,15 @@ const AlertNotification = ({ open, message, severity, onClose }) => {
   return (
     <Snackbar
       open={open}
-      autoHideDuration={6000}
+      autoHideDuration={4000}
       onClose={onClose}
-      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
     >
-      <Alert onClose={onClose} severity={severity} sx={{ width: '100%' }}>
+      <Alert onClose={onClose} severity={severity} sx={{ width: '100%', borderRadius: 3 }}>
         {message}
       </Alert>
     </Snackbar>
   );
 };
 
-export default AlertNotification; ppp
+export default AlertNotification;
