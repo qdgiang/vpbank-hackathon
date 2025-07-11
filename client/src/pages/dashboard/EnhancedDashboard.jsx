@@ -29,7 +29,7 @@ import {
   Flag
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { fetchJarsData } from '../../store/dashboardSlice';
+import { fetchJarsData } from '../store/jarsSlice';
 import JarSettings from '../../components/JarSettings';
 import GoalSettings from '../../components/GoalSettings';
 import DashboardCharts from '../../components/DashboardCharts';

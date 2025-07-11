@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card, CardContent, Typography, Box, TextField, MenuItem, Select, InputLabel, FormControl, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Pagination
 } from '@mui/material';
@@ -9,10 +9,17 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchTransactionsData, createTransactionData, updateTransactionData, deleteTransactionData } from '../store/transactionsSlice';
 
 const ROW_OPTIONS = [10, 20, 50];
 
-const TransactionManagementCard = ({ transactions, setTransactions, classifyTransaction, jarList }) => {
+const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
+  const dispatch = useDispatch();
+  const { transactions, loading } = useSelector(state => state.transactions);
+  useEffect(() => {
+    dispatch(fetchTransactionsData());
+  }, [dispatch]);
   const [filterText, setFilterText] = useState('');
   const [filterFrom, setFilterFrom] = useState('');
   const [filterTo, setFilterTo] = useState('');
@@ -49,11 +56,9 @@ const TransactionManagementCard = ({ transactions, setTransactions, classifyTran
 
   const handleSave = () => {
     setSaving(true);
-    setTransactions(prev =>
-      prev.map((tx, i) =>
-        editedJars[i] ? { ...tx, jar: editedJars[i] } : tx
-      )
-    );
+    Object.entries(editedJars).forEach(([idx, newJar]) => {
+      dispatch(updateTransactionData({ id: transactions[Number(idx)].id, data: { jar: newJar } }));
+    });
     setEditedJars({});
     setTimeout(() => setSaving(false), 500); // Simulate save
   };
@@ -67,6 +72,17 @@ const TransactionManagementCard = ({ transactions, setTransactions, classifyTran
   const handleRowsPerPageChange = (e) => {
     setRowsPerPage(Number(e.target.value));
     setPage(1);
+  };
+
+  // Replace add/edit/delete handlers:
+  const handleAddTransaction = (tx) => {
+    dispatch(createTransactionData(tx));
+  };
+  const handleEditTransaction = (id, data) => {
+    dispatch(updateTransactionData({ id, data }));
+  };
+  const handleDeleteTransaction = (id) => {
+    dispatch(deleteTransactionData(id));
   };
 
   return (

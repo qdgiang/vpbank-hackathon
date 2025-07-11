@@ -19,8 +19,17 @@ import {
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AddCircleIcon from "@mui/icons-material/AddCircle.js";
+import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { fetchGoalsData, createGoalData, updateGoalData, deleteGoalData } from '../store/goalsSlice';
 
-const GoalSettings = ({ goals, setGoals }) => {
+const GoalSettings = () => {
+  const dispatch = useDispatch();
+  const { goals, loading } = useSelector(state => state.goals);
+  useEffect(() => {
+    dispatch(fetchGoalsData());
+  }, [dispatch]);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
   const [formData, setFormData] = useState({
@@ -62,26 +71,15 @@ const GoalSettings = ({ goals, setGoals }) => {
   };
 
   const handleDeleteGoal = (goalId) => {
-    setGoals(goals.filter(goal => goal.id !== goalId));
+    dispatch(deleteGoalData(goalId));
   };
 
   const handleSaveGoal = () => {
-    const newGoal = {
-      id: editingGoal ? editingGoal.id : Date.now(),
-      name: formData.name,
-      target: parseFloat(formData.target),
-      current: parseFloat(formData.current),
-      deadline: formData.deadline,
-      category: formData.category,
-      priority: formData.priority
-    };
-
     if (editingGoal) {
-      setGoals(goals.map(goal => goal.id === editingGoal.id ? newGoal : goal));
+      dispatch(updateGoalData({ id: editingGoal.goal_id, data: formData }));
     } else {
-      setGoals([...goals, newGoal]);
+      dispatch(createGoalData(formData));
     }
-
     setDialogOpen(false);
   };
 

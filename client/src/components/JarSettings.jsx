@@ -15,6 +15,8 @@ import {
 } from '@mui/material';
 import { Edit, Save, Cancel, Percent } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchJarsData, createJarData, updateJarData, deleteJarData } from '../store/jarsSlice';
 
 const defaultJars = [
   { id: 1, name: 'Necessities', percentage: 55, color: '#FF6B6B', description: 'Basic needs like food, housing, utilities' },
@@ -25,12 +27,17 @@ const defaultJars = [
   { id: 6, name: 'Give', percentage: 5, color: '#DDA0DD', description: 'Charity and helping others' }
 ];
 
-const JarSettings = ({ onSave }) => {
-  const [jars, setJars] = useState(defaultJars);
+const JarSettings = () => {
+  const dispatch = useDispatch();
+  const { jars, loading } = useSelector(state => state.jars);
   const [editing, setEditing] = useState(false);
   const [tempJars, setTempJars] = useState(defaultJars);
   const [totalPercentage, setTotalPercentage] = useState(100);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    dispatch(fetchJarsData());
+  }, [dispatch]);
 
   useEffect(() => {
     const total = tempJars.reduce((sum, jar) => sum + jar.percentage, 0);
@@ -52,10 +59,11 @@ const JarSettings = ({ onSave }) => {
 
   const handleSave = () => {
     if (totalPercentage === 100) {
-      setJars(tempJars);
+      // This part needs to be updated to use thunk actions for add/edit/delete
+      // For now, it's a placeholder.
+      console.log('Saving jars:', tempJars);
       setEditing(false);
       setError('');
-      if (onSave) onSave(tempJars);
     }
   };
 
@@ -63,6 +71,16 @@ const JarSettings = ({ onSave }) => {
     setTempJars(jars);
     setEditing(false);
     setError('');
+  };
+
+  const handleAddJar = (data) => {
+    dispatch(createJarData(data));
+  };
+  const handleEditJar = (id, data) => {
+    dispatch(updateJarData({ id, data }));
+  };
+  const handleDeleteJar = (id) => {
+    dispatch(deleteJarData(id));
   };
 
   const getStatusColor = () => {

@@ -20,21 +20,15 @@ import {
   Tab,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Badge
 } from '@mui/material';
-import {
-  AccountCircle,
-  Logout,
-  Settings,
-  Dashboard as DashboardIcon,
-  TrendingUp,
-  AccountBalance,
-  Flag
-} from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import JarSettings from '../../components/JarSettings';
 import GoalSettings from '../../components/GoalSettings';
-import SimpleCharts from '../../components/SimpleCharts';
 import { useBank } from '../../contexts/BankContext';
 import { useNavigate } from 'react-router-dom';
 import TransactionInputButton from '../../components/TransactionInput';
@@ -46,91 +40,46 @@ import { Icon } from '@iconify/react';
 import JarPolarChart from '../../components/JarPolarChart';
 import ApexCharts from 'react-apexcharts';
 import dayjs from 'dayjs';
-import { mockTransactions } from './mockBankData';
-import GoalRadialChart from '../../components/GoalRadialChart';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchTransactionsData, createTransactionData, updateTransactionData, deleteTransactionData } from '../../store/transactionsSlice';
+import { fetchJarsData } from '../../store/jarsSlice';
 import TransactionManagementCard from '../../components/TransactionManagementCard';
 
 const DemoDashboard = () => {
-  const { bankInfo, disconnectBank } = useBank();
-  const navigate = useNavigate();
-  const [transactions, setTransactions] = useState([]);
-  const [jarSettings, setJarSettings] = useState({
-    Necessities: 55,
-    FFA: 10,
-    LTSS: 10,
-    Education: 10,
-    Play: 10,
-    Give: 5
-  });
   const pieChartRef = useRef(null);
   const am5RootRef = useRef(null);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: 'Welcome to SmartJarvis!',
-      content: 'You have successfully connected your bank account. Start managing your finances smartly!',
-      read: false
-    },
-    {
-      id: 2,
-      title: 'Saving suggestion',
-      content: 'You should increase the allocation to the Long-term Savings jar to reach your goal faster.',
-      read: false
-    },
-    {
-      id: 3,
-      title: 'Spending alert',
-      content: 'Spending for the Play jar has exceeded 10% of the plan this month.',
-      read: true
-    }
-  ]);
-
+  const { bankInfo, disconnectBank } = useBank();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const transactions = useSelector(state => state.transactions.transactions) || [];
+  const jars = useSelector(state => state.dashboard.jars);
+  const user = useSelector(state => state.auth.currentUser);
+  const notifications = useSelector(state => state.notifications.notifications); // If notifications in redux, else keep local
+  const goals = useSelector(state => state.goals.goals); // If goals in redux, else keep local
+  // Nếu goals được quản lý qua redux, có thể bỏ useState. Nếu cần local state, dùng dòng sau:
+  // const [goals, setGoals] = useState([]);
+  // const [setGoals] = useState(() => () => {}); // Dummy setGoals để tránh lỗi ReferenceError
+  // const [setTransactions] = useState(() => () => {}); // Dummy setTransactions để tránh lỗi ReferenceError
+  const [notificationFilter, setNotificationFilter] = useState('all');
   const [overviewTab, setOverviewTab] = useState(0);
   const [statTab, setStatTab] = useState('income');
   const [anchorEl, setAnchorEl] = useState(null);
-  const [goals, setGoals] = useState([
-    {
-      id: 1,
-      name: 'Emergency Fund',
-      target: 10000000,
-      current: 3500000,
-      deadline: '2024-12-31',
-      category: 'Savings',
-      priority: 'High'
-    },
-    {
-      id: 2,
-      name: 'Vacation Fund',
-      target: 5000000,
-      current: 2000000,
-      deadline: '2024-06-30',
-      category: 'Travel',
-      priority: 'Medium'
-    },
-    {
-      id: 3,
-      name: 'New Car',
-      target: 300000000,
-      current: 50000000,
-      deadline: '2025-12-31',
-      category: 'Transportation',
-      priority: 'Low'
-    }
-  ]);
   const [selectedMonth, setSelectedMonth] = useState('All');
+  const [notificationOpen, setNotificationOpen] = useState(false);
   // Lấy danh sách các tháng có trong transactions
-  const monthOptions = Array.from(new Set(transactions.map(tx => dayjs(tx.date).format('MMM YYYY'))));
+  const monthOptions = Array.from(new Set(transactions.map(tx => dayjs(tx.txn_time).format('MMM YYYY'))));
 
-  // Load transactions khi component mount hoặc bankInfo thay đổi
+  // 2. useEffect to fetch all data on mount
   useEffect(() => {
-    if (bankInfo && bankInfo.code && mockTransactions[bankInfo.code]) {
-      setTransactions(mockTransactions[bankInfo.code]);
-    }
-  }, [bankInfo]);
+    dispatch(fetchTransactionsData());
+    dispatch(fetchJarsData());
+    // dispatch(fetchNotificationsData()); // If notifications in redux
+    // dispatch(fetchGoalsData()); // If goals in redux
+  }, [dispatch]);
 
   // Đồng bộ số liệu với transactions
   // Tạo mảng các tháng có trong transactions và sắp xếp theo thứ tự thời gian
-  const allMonths = transactions.map(tx => dayjs(tx.date).format('MMM'));
+  const allMonths = transactions.map(tx => dayjs(tx.txn_time).format('MMM'));
   const uniqueMonths = [...new Set(allMonths)];
   const months = uniqueMonths.sort((a, b) => {
     const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -147,11 +96,11 @@ const DemoDashboard = () => {
   
   // Tính income/expense theo tháng
   const incomeData = chartMonths.map(month =>
-    transactions.filter(tx => tx.amount > 0 && dayjs(tx.date).format('MMM') === month)
+    transactions.filter(tx => tx.amount > 0 && dayjs(tx.txn_time).format('MMM') === month)
       .reduce((sum, tx) => sum + tx.amount, 0)
   );
   const expenseData = chartMonths.map(month =>
-    transactions.filter(tx => tx.amount < 0 && dayjs(tx.date).format('MMM') === month)
+    transactions.filter(tx => tx.amount < 0 && dayjs(tx.txn_time).format('MMM') === month)
       .reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
   );
   const totalIncome = incomeData.reduce((a, b) => a + b, 0);
@@ -182,7 +131,7 @@ const DemoDashboard = () => {
     updatedJars.forEach(jar => {
       newSettings[jar.key] = jar.percent;
     });
-    setJarSettings(newSettings);
+    dispatch(updateJarData(newSettings));
   };
 
   const formatCurrency = (amount) => {
@@ -218,33 +167,57 @@ const DemoDashboard = () => {
     navigate('/bank-demo');
   };
 
+  const handleOpenNotification = () => setNotificationOpen(true);
+  const handleCloseNotification = () => setNotificationOpen(false);
+
+  const handleFilterChange = (e) => setNotificationFilter(e.target.value);
+
+  const filteredNotifications = notificationFilter === 'all'
+    ? notifications
+    : notifications.filter(n => n.notification_type === notificationFilter);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
   const handleAddTransaction = (tx) => {
-    setTransactions(prev => [tx, ...prev]);
+    dispatch(createTransactionData(tx));
+    // Add notification for confirm
+    // setNotifications(prev => [ // This line is removed as notifications are now in Redux
+    //   {
+    //     id: Date.now(),
+    //     notification_type: 'confirm',
+    //     title: 'Xác nhận giao dịch mới',
+    //     content: `Vui lòng xác nhận giao dịch "${tx.msg_content || ''}" vừa được thêm!`,
+    //     read: false,
+    //     status: 0,
+    //     created_at: new Date().toISOString(),
+    //   },
+    //   ...prev
+    // ]);
     // Nếu là chi tiêu và vượt 10% tổng số dư, sinh notification
-    if (tx.amount < 0 && Math.abs(tx.amount) > 0.1 * totalBalance) {
-      setNotifications(prev => [
-        {
-          id: Date.now(),
-          title: 'Cảnh báo chi tiêu lớn',
-          content: `Giao dịch "${tx.description}" có số tiền vượt 10% tổng số dư!`,
-          read: false
-        },
-        ...prev
-      ]);
-    }
+    // if (tx.amount < 0 && Math.abs(tx.amount) > 0.1 * totalBalance) { // totalBalance is not defined here, this logic needs to be re-evaluated
+    //   setNotifications(prev => [
+    //     {
+    //       id: Date.now(),
+    //       title: 'Cảnh báo chi tiêu lớn',
+    //       content: `Giao dịch "${tx.msg_content || ''}" có số tiền vượt 10% tổng số dư!`,
+    //       read: false
+    //     },
+    //     ...prev
+    //   ]);
+    // }
   };
 
   const handleReadNotification = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    // setNotifications(prev => prev.map(n => (n.notification_id === id || n.id === id) ? { ...n, status: 1, read: true } : n)); // This line is removed
   };
 
   const handleDeleteNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    // setNotifications(prev => prev.filter(n => n.id !== id)); // This line is removed
   };
 
   // Hàm phân loại transaction vào jar (tạm thời dựa vào description)
   const classifyTransaction = (tx) => {
-    const desc = tx.description.toLowerCase();
+    const desc = (tx.msg_content || '').toLowerCase();
     // FFA (Financial Freedom)
     if (
       desc.includes('lương') || desc.includes('salary') ||
@@ -310,7 +283,7 @@ const DemoDashboard = () => {
   // Filter transactions theo tháng đã chọn
   const filteredTransactions = selectedMonth === 'All'
     ? transactions
-    : transactions.filter(tx => dayjs(tx.date).format('MMM YYYY') === selectedMonth);
+    : transactions.filter(tx => dayjs(tx.txn_time).format('MMM YYYY') === selectedMonth);
 
   // Tổng số dư hiện tại = tổng tất cả các transaction (income - expense) trong tháng đã chọn
   const totalBalance = filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
@@ -323,17 +296,21 @@ const DemoDashboard = () => {
   ];
   // Tính số tiền đã tiết kiệm cho từng goal từ transactions (tạm dựa vào description)
   const computedGoals = goals.map(goal => {
-    const goalTxs = transactions.filter(tx => tx.description.toLowerCase().includes(goal.name.toLowerCase()) || tx.description.toLowerCase().includes('tiết kiệm'));
+    const goalTxs = transactions.filter(
+      tx => (tx.msg_content || '').toLowerCase().includes(goal.name.toLowerCase()) ||
+            (tx.msg_content || '').toLowerCase().includes('tiết kiệm')
+    );
     const saved = goalTxs.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0);
     const percent = Math.min(100, (saved / goal.target) * 100);
     // ETA: số tháng còn lại = (target - saved) / tốc độ tiết kiệm TB/tháng
-    const months = Array.from(new Set(goalTxs.map(tx => dayjs(tx.date).format('YYYY-MM'))));
+    const months = Array.from(new Set(goalTxs.map(tx => dayjs(tx.txn_time).format('YYYY-MM'))));
     const avgPerMonth = months.length > 0 ? saved / months.length : 0;
     const eta = avgPerMonth > 0 ? Math.ceil((goal.target - saved) / avgPerMonth) : null;
     return { ...goal, saved, percent, eta };
   });
 
-  const jars = jarList.map(jar => {
+  // Rename the local jars variable to computedJars to avoid redeclaration
+  const computedJars = jarList.map(jar => {
     const spent = filteredTransactions.filter(tx => {
       const jarKey = tx.jar || classifyTransaction(tx);
       return jarKey === jar.key && tx.amount < 0;
@@ -346,7 +323,7 @@ const DemoDashboard = () => {
       }).reduce((s, tx) => s + Math.abs(tx.amount), 0);
     }, 0);
     const actualPercent = totalExpenseAllJars > 0 ? (spent / totalExpenseAllJars) * 100 : 0;
-    const setPercent = Number(jarSettings[jar.key]) || 0;
+    const setPercent = Number(jarList.find(j => j.key === jar.key)?.percent) || 0; // Assuming jarList has a 'percent' property
     const allowed = (totalExpenseAllJars * setPercent) / 100;
     const exceeded = spent > allowed ? spent - allowed : 0;
     return {
@@ -403,7 +380,7 @@ const DemoDashboard = () => {
     // Set data
     series.data.setAll(
       jarList.map(jar => ({
-        value: jarSettings[jar.key] || 0,
+        value: jarList.find(j => j.key === jar.key)?.percent || 0, // Use actual percent from jarList
         category: jar.name,
         color: jar.color || am5.color('#4ECDC4')
       }))
@@ -451,7 +428,7 @@ const DemoDashboard = () => {
       root.dispose();
       am5RootRef.current = null;
     };
-  }, [jarSettings]);
+  }, [jarList]); // Depend on jarList to update when settings change
 
   return (
     <Box sx={{ flexGrow: 1, backgroundColor: '#f5f5f5', minHeight: '100vh', fontFamily: 'sans-serif' }}>
@@ -491,6 +468,12 @@ const DemoDashboard = () => {
             <Button variant="outlined" color="secondary" onClick={handleChangeBank} sx={{ borderRadius: 2, fontWeight: 'bold', px: 2, py: 0.5, minWidth: 0 }} >
              Disconnect
             </Button>
+            {/* Notification Bell */}
+            <IconButton color="inherit" onClick={handleOpenNotification}>
+              <Badge badgeContent={unreadCount} color="error">
+                <Icon icon="solar:bell-bold-duotone" style={{ fontSize: 28 }} />
+              </Badge>
+            </IconButton>
             <IconButton
               size="large"
               onClick={handleMenuOpen}
@@ -526,6 +509,24 @@ const DemoDashboard = () => {
           </Box>
         </Toolbar>
       </AppBar>
+      {/* Notification Center Dialog */}
+      <Dialog open={notificationOpen} onClose={handleCloseNotification} maxWidth="xs" fullWidth>
+        <DialogTitle>Notification Center</DialogTitle>
+        <DialogContent>
+          <Box mb={2} display="flex" gap={1} alignItems="center">
+            <Typography variant="body2">Lọc theo loại:</Typography>
+            <Select size="small" value={notificationFilter} onChange={handleFilterChange}>
+              <MenuItem value="all">Tất cả</MenuItem>
+              <MenuItem value="confirm">Xác nhận</MenuItem>
+              <MenuItem value="alert">Cảnh báo</MenuItem>
+              <MenuItem value="goal">Mục tiêu</MenuItem>
+              <MenuItem value="spending">Chi tiêu</MenuItem>
+            </Select>
+          </Box>
+          <NotificationCenter notifications={filteredNotifications} onRead={handleReadNotification}
+                                      onDelete={handleDeleteNotification}/>
+        </DialogContent>
+      </Dialog>
 
       {/* Main Content */}
       <Container maxWidth="xl" sx={{ mt: 3, mb: 4 }}>
@@ -569,7 +570,7 @@ const DemoDashboard = () => {
                   <CardContent>
                     <Icon icon="solar:wallet-bold-duotone" style={{ fontSize: 40, marginBottom: 8, color: '#388e3c' }} />
                     <Typography variant="h5" sx={{ color: '#388e3c', fontWeight: 'bold' }}>
-                      {jars.length}
+                      {computedJars.length}
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#388e3c', opacity: 0.7 }}>
                       Total Jars
@@ -760,7 +761,7 @@ const DemoDashboard = () => {
                     {overviewTab === 0 && (
                       <>
                         <Box sx={{ mt: 2 }}>
-                          {jars.map((jar) => {
+                          {computedJars.map((jar) => {
                             const percentColor = jar.actualPercent > jar.setPercent ? 'error.main' : 'primary.main';
                             return (
                               <Box key={jar.name} sx={{ mb: 2, p: 2, borderRadius: 3, background: '#fafbfc', boxShadow: '0 1px 4px #0001' }}>
@@ -804,7 +805,7 @@ const DemoDashboard = () => {
                     )}
                     {overviewTab === 1 && (
                       <Box mt={2}>
-                        <JarPolarChart jars={jars} />
+                        <JarPolarChart jars={computedJars} />
                       </Box>
                     )}
                     {/*{overviewTab === 2 && (*/}
@@ -817,13 +818,12 @@ const DemoDashboard = () => {
               </motion.div>
               <motion.div variants={itemVariants}>
                 <Box sx={{ borderRadius: 4, boxShadow: '0 2px 12px #0001' }}>
-                  <GoalSettings goals={goals} setGoals={setGoals} />
+                  <GoalSettings goals={goals} />
                 </Box>
               </motion.div>
               <motion.div variants={itemVariants}>
                 <TransactionManagementCard
                   transactions={transactions}
-                  setTransactions={setTransactions}
                   classifyTransaction={classifyTransaction}
                   jarList={jarList}
                 />

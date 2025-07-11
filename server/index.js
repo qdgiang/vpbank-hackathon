@@ -1,7 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
-const jarRoutes = require('./routes/jars');
+const usersRouter = require('./routes/users');
+const transactionsRouter = require('./routes/transactions');
+const notificationsRouter = require('./routes/notifications');
+const goalsRouter = require('./routes/goals');
+const jarsRouter = require('./routes/jars');
 
 const app = express();
 
@@ -22,7 +26,11 @@ app.get('/api/test', (req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/jars', jarRoutes);
+app.use('/api/users', usersRouter);
+app.use('/api/transactions', transactionsRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/goals', goalsRouter);
+app.use('/api/jars', jarsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

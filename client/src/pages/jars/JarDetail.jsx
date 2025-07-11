@@ -32,15 +32,15 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { fetchJarTransactionsData, createTransactionData, updateTransactionData, deleteTransactionData } from '../../store/transactionsSlice';
-import { updateJarData } from './jarsSlice';
+import { fetchTransactionsData, createTransactionData, updateTransactionData, deleteTransactionData } from '../../store/transactionsSlice';
+import { updateJarData } from '../../store/jarsSlice';
 
 const JarDetail = () => {
   const { jarId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { transactions, loading, error } = useSelector((state) => state.transactions);
-  const { jars } = useSelector((state) => state.jars);
+  const { jars, loading: jarsLoading } = useSelector(state => state.jars);
+  const { transactions, loading: txLoading } = useSelector(state => state.transactions);
   const jar = jars.find(j => j.id === jarId);
 
   const [openDialog, setOpenDialog] = useState(false);
@@ -55,10 +55,8 @@ const JarDetail = () => {
   const [endDate, setEndDate] = useState(null);
 
   useEffect(() => {
-    if (jarId) {
-      dispatch(fetchJarTransactionsData(jarId));
-    }
-  }, [dispatch, jarId]);
+    dispatch(fetchTransactionsData());
+  }, [dispatch]);
 
   const handleOpenDialog = (transaction = null) => {
     if (transaction) {
@@ -220,12 +218,10 @@ const JarDetail = () => {
           </Grid>
         </Box>
 
-        {loading ? (
+        {txLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
             <CircularProgress />
           </Box>
-        ) : error ? (
-          <Alert severity="error">{error}</Alert>
         ) : (
           <TableContainer>
             <Table>

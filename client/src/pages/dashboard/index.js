@@ -5,7 +5,7 @@ import { Menu as MenuIcon } from '@mui/icons-material';
 import * as am5 from '@amcharts/amcharts5';
 import * as am5xy from '@amcharts/amcharts5/xy';
 import * as am5percent from '@amcharts/amcharts5/percent';
-import { fetchJars } from './dashboardSlice';
+import { fetchJars } from '../store/jarsSlice';
 import JarCard from '../../components/JarCard';
 import AlertNotification from '../../components/AlertNotification';
 
