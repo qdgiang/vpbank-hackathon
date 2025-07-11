@@ -1,16 +1,13 @@
 import axios from 'axios';
+import apiConfig from './api.config';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-
-// Create axios instance with default config
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: apiConfig.baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add token to requests if it exists
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -19,83 +16,43 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Auth APIs
-export const loginUser = async (credentials) => {
-  const response = await api.post('/auth/login', credentials);
-  return response;
-};
+// Users
+export const fetchUsers = async () => api.get(apiConfig.users);
+export const fetchUser = async (id) => api.get(`${apiConfig.users}/${id}`);
+export const createUser = async (data) => api.post(apiConfig.users, data);
+export const updateUser = async (id, data) => api.put(`${apiConfig.users}/${id}`, data);
+export const deleteUser = async (id) => api.delete(`${apiConfig.users}/${id}`);
 
-export const registerUser = async (userData) => {
-  const response = await api.post('/auth/register', userData);
-  return response;
-};
+// Transactions
+export const fetchTransactions = async () => api.get(apiConfig.transactions);
+export const fetchTransaction = async (id) => api.get(`${apiConfig.transactions}/${id}`);
+export const createTransaction = async (data) => api.post(apiConfig.transactions, data);
+export const updateTransaction = async (id, data) => api.put(`${apiConfig.transactions}/${id}`, data);
+export const deleteTransaction = async (id) => api.delete(`${apiConfig.transactions}/${id}`);
 
-// Jar APIs
-export const fetchJars = async () => {
-  const response = await api.get('/jars');
-  return response;
-};
+// Notifications
+export const fetchNotifications = async () => api.get(apiConfig.notifications);
+export const fetchNotification = async (id) => api.get(`${apiConfig.notifications}/${id}`);
+export const createNotification = async (data) => api.post(apiConfig.notifications, data);
+export const updateNotification = async (id, data) => api.put(`${apiConfig.notifications}/${id}`, data);
+export const deleteNotification = async (id) => api.delete(`${apiConfig.notifications}/${id}`);
 
-export const updateJar = async (jarId, data) => {
-  const response = await api.put(`/jars/${jarId}`, data);
-  return response;
-};
+// Goals
+export const fetchGoals = async () => api.get(apiConfig.goals);
+export const fetchGoal = async (id) => api.get(`${apiConfig.goals}/${id}`);
+export const createGoal = async (data) => api.post(apiConfig.goals, data);
+export const updateGoal = async (id, data) => api.put(`${apiConfig.goals}/${id}`, data);
+export const deleteGoal = async (id) => api.delete(`${apiConfig.goals}/${id}`);
 
-export const createJar = async (data) => {
-  const response = await api.post('/jars', data);
-  return response;
-};
+// Jars
+export const fetchJars = async () => api.get(apiConfig.jars);
+export const fetchJar = async (id) => api.get(`${apiConfig.jars}/${id}`);
+export const createJar = async (data) => api.post(apiConfig.jars, data);
+export const updateJar = async (id, data) => api.put(`${apiConfig.jars}/${id}`, data);
+export const deleteJar = async (id) => api.delete(`${apiConfig.jars}/${id}`);
 
-export const deleteJar = async (jarId) => {
-  const response = await api.delete(`/jars/${jarId}`);
-  return response;
-};
-
-// Transaction APIs
-export const fetchTransactions = async () => {
-  const response = await api.get('/transactions');
-  return response;
-};
-
-export const fetchJarTransactions = async (jarId) => {
-  const response = await api.get(`/transactions/jar/${jarId}`);
-  return response;
-};
-
-export const createTransaction = async (data) => {
-  const response = await api.post('/transactions', data);
-  return response;
-};
-
-export const updateTransaction = async (transactionId, data) => {
-  const response = await api.put(`/transactions/${transactionId}`, data);
-  return response;
-};
-
-export const deleteTransaction = async (transactionId) => {
-  const response = await api.delete(`/transactions/${transactionId}`);
-  return response;
-};
-
-// Category APIs
-export const fetchCategories = async () => {
-  const response = await api.get('/categories');
-  return response;
-};
-
-export const createCategory = async (data) => {
-  const response = await api.post('/categories', data);
-  return response;
-};
-
-export const updateCategory = async (categoryId, data) => {
-  const response = await api.put(`/categories/${categoryId}`, data);
-  return response;
-};
-
-export const deleteCategory = async (categoryId) => {
-  const response = await api.delete(`/categories/${categoryId}`);
-  return response;
-};
+// Auth
+export const loginUser = async (credentials) => api.post(apiConfig.login, credentials);
+export const registerUser = async (data) => api.post(apiConfig.register, data);
 
 export default api; 

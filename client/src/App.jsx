@@ -1,41 +1,47 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import Login from './pages/auth/Login.jsx';
-import Register from './pages/auth/Register.jsx';
-import Dashboard from './pages/dashboard/index.jsx';
-import JarDetail from './pages/jars/JarDetail.jsx';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import DemoDashboard from './pages/dashboard/DemoDashboard.jsx';
+import DemoBankConnect from './pages/dashboard/DemoBankConnect.jsx';
+import { BankProvider, useBank } from './contexts/BankContext';
 
-const PrivateRoute = ({ children }) => {
-  const { isAuthenticated } = useSelector((state) => state.auth);
-  return isAuthenticated ? children : <Navigate to="/login" />;
-};
+function ProtectedRoute({ children }) {
+  const { isBankConnected } = useBank();
+  const location = useLocation();
+  if (!isBankConnected) {
+    return <Navigate to="/bank-demo" state={{ from: location }} replace />;
+  }
+  return children;
+}
+
+function BankGuardedBankConnect() {
+  const { isBankConnected } = useBank();
+  if (isBankConnected) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <DemoBankConnect />;
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <DemoDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/bank-demo" element={<BankGuardedBankConnect />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
+    <BankProvider>
     <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/jars/:jarId"
-          element={
-            <PrivateRoute>
-              <JarDetail />
-            </PrivateRoute>
-          }
-        />
-        <Route path="/" element={<Navigate to="/dashboard" />} />
-      </Routes>
+        <AppRoutes />
     </Router>
+    </BankProvider>
   );
 }
 

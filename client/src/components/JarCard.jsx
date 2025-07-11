@@ -41,6 +41,7 @@ const JarCard = ({ jar, onUpdate }) => {
             minWidth: 275,
             cursor: 'pointer',
             transition: 'all 0.3s ease',
+            borderRadius: 4,
             '&:hover': {
               boxShadow: 6
             }
@@ -93,8 +94,8 @@ const JarCard = ({ jar, onUpdate }) => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleCloseDialog} sx={{ borderRadius: 2, fontWeight: 'bold', px: 2, py: 0.5, minWidth: 0 }}>Cancel</Button>
+          <Button onClick={handleSave} sx={{ borderRadius: 2, fontWeight: 'bold', px: 2, py: 0.5, minWidth: 0 }}>Save</Button>
         </DialogActions>
       </Dialog>
     </>

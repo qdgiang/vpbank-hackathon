@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import {
   fetchTransactions,
-  fetchJarTransactions,
   createTransaction,
   updateTransaction,
   deleteTransaction
@@ -12,18 +11,6 @@ export const fetchTransactionsData = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await fetchTransactions();
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response.data);
-    }
-  }
-);
-
-export const fetchJarTransactionsData = createAsyncThunk(
-  'transactions/fetchJarTransactions',
-  async (jarId, { rejectWithValue }) => {
-    try {
-      const response = await fetchJarTransactions(jarId);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response.data);
@@ -95,19 +82,6 @@ const transactionsSlice = createSlice({
       .addCase(fetchTransactionsData.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.message || 'Failed to fetch transactions';
-      })
-      // Fetch Jar Transactions
-      .addCase(fetchJarTransactionsData.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchJarTransactionsData.fulfilled, (state, action) => {
-        state.loading = false;
-        state.transactions = action.payload;
-      })
-      .addCase(fetchJarTransactionsData.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload?.message || 'Failed to fetch jar transactions';
       })
       // Create Transaction
       .addCase(createTransactionData.pending, (state) => {

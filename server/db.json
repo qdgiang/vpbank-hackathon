@@ -49,5 +49,15 @@
       "category": "Transportation",
       "date": "2024-03-16T00:00:00.000Z"
     }
+  ],
+  "vpb": [
+    { "description": "Lương tháng 6", "amount": 14000000, "date": "2024-06-25" },
+    { "description": "Tiết kiệm Mua xe máy", "amount": 2000000, "date": "2024-06-28" },
+    { "description": "Tiết kiệm Du lịch Đà Nẵng", "amount": 1000000, "date": "2024-06-28" },
+    { "description": "Tiết kiệm Quỹ khẩn cấp", "amount": 1500000, "date": "2024-06-28" },
+    { "description": "Thanh toán điện thoại", "amount": -200000, "date": "2024-06-26" },
+    { "description": "Mua đồ ăn nhanh", "amount": -150000, "date": "2024-06-27" },
+    { "description": "Chuyển tiền tiết kiệm", "amount": -1200000, "date": "2024-06-27" },
+    { "description": "Tiền lãi tiết kiệm", "amount": 45000, "date": "2024-06-28" }
   ]
 }
