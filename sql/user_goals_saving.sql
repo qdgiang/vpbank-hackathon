@@ -9,7 +9,7 @@ CREATE TABLE saving_goals
     target_date    DATE,
     goal_type      VARCHAR(20)              DEFAULT 'long_term',
     priority_level INTEGER                  DEFAULT 1,
-    is_active      BOOLEAN                  DEFAULT TRUE,
+    status         INTEGER                  DEFAULT 0,
     created_at     TIMESTAMP                DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP                DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT valid_amounts 

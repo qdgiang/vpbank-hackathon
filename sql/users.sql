@@ -9,7 +9,7 @@ CREATE TABLE users
     date_of_birth DATE,
     created_at    TIMESTAMP                DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP                DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_active     BOOLEAN                  DEFAULT TRUE,
+    status     BOOLEAN                  DEFAULT 0,
     timezone      VARCHAR(50)              DEFAULT 'Asia/Ho_Chi_Minh',
     city          VARCHAR(30)
 );
