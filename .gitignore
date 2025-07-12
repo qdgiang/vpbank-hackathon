@@ -40,3 +40,6 @@ lambda/**/*layer*.zip
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+sagemaker_pipeline/run_test.sh
+sagemaker_pipeline/docker/models/*.bin
