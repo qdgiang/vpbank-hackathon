@@ -8,10 +8,10 @@ logger.setLevel(logging.INFO)
 
 bedrock_runtime_client = boto3.client(
     service_name='bedrock-runtime', 
-    region_name=os.environ.get("aws_region", "ap-southeast-2")
+    region_name=os.environ.get("AWS_REGION", "ap-southeast-2")
 )
 
-MODEL_ID = os.environ.get("bedrock_model_id", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
+MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
 
 def generate_coaching_advice(triggered_jars: list):
     if not triggered_jars:

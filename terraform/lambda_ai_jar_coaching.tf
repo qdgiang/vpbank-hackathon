@@ -51,13 +51,13 @@ resource "aws_lambda_function" "ai_jar_coaching" {
 
   environment {
     variables = {
-      db_host     = aws_db_instance.main.address
-      db_user     = var.db_username
-      db_password = var.db_password
-      db_name     = var.db_name
-      db_port     = var.db_port
-      bedrock_model_id = var.bedrock_model_id
-      aws_region  = var.aws_region
+      DB_HOST          = aws_db_instance.main.address
+      DB_PORT          = aws_db_instance.main.port
+      DB_NAME          = var.db_name
+      DB_USER          = var.db_username
+      DB_PASSWORD      = var.db_password
+      AWS_REGION       = var.aws_region
+      BEDROCK_MODEL_ID = var.bedrock_model_id
     }
   }
 

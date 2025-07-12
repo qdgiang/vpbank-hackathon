@@ -31,8 +31,8 @@ logging.basicConfig(level=logging.INFO,
                     ])
 logger = logging.getLogger(__name__)
 
-bedrock_client = boto3.client('bedrock-runtime', region_name=os.environ.get("aws_region", "ap-southeast-2"))
-MODEL_ID = os.environ.get("bedrock_model_id", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
+bedrock_client = boto3.client('bedrock-runtime', region_name=os.environ.get("AWS_REGION", "ap-southeast-2"))
+MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
 
 tool_dispatcher = {
     "query_user_jar_spending": execute_sql,
