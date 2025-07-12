@@ -3,16 +3,14 @@ from typing import Dict, List, Any
 
 logger = logging.getLogger(__name__)
 
-_session_cache: Dict[str, List[Dict[str, Any]]] = {}
+_chat_history: List[Dict[str, Any]] = []
 
-def load_chat_history(session_id: str) -> List[Dict[str, Any]]:
-    return _session_cache.get(session_id, [])
+def load_chat_history() -> List[Dict[str, Any]]:
+    return _chat_history
 
-def save_to_chat_history(session_id: str, user_prompt: str, ai_answer: str, used_tools: List[Dict[str, Any]]):
-    if session_id not in _session_cache:
-        _session_cache[session_id] = []
-    _session_cache[session_id].append({"user_prompt": user_prompt, "ai_answer": ai_answer, "used_tools": used_tools})
-    logger.info(f"Saved chat history for session '{session_id}'. Cache size: {len(_session_cache[session_id])} entries.")
+def save_to_chat_history(user_prompt: str, ai_answer: str, used_tools: List[Dict[str, Any]]):
+    _chat_history.append({"user_prompt": user_prompt, "ai_answer": ai_answer, "used_tools": used_tools})
+    logger.info(f"Saved chat history. Cache size: {len(_chat_history)} entries.")
 
 def format_prompt_with_history(chat_history: List[Dict[str, Any]], new_prompt: str) -> str:
     if not chat_history:

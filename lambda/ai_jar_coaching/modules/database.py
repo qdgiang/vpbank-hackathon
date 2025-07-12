@@ -6,11 +6,11 @@ from typing import List, Dict, Any
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-DB_HOST = os.environ.get('DB_HOST', '127.0.0.1')
-DB_USER = os.environ.get('DB_USER', 'root')
-DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
-DB_NAME = os.environ.get('DB_NAME', 'testdb')
-DB_PORT = int(os.environ.get('DB_PORT', 3307))
+DB_HOST = os.environ.get("db_host", "127.0.0.1")
+DB_USER = os.environ.get("db_user", "root")
+DB_PASSWORD = os.environ.get("db_password", "")
+DB_NAME = os.environ.get("db_name", 'testdb')
+DB_PORT = int(os.environ.get('db_port', 3307))
 
 # Global variable for the database connection
 db_connection = None
@@ -60,3 +60,9 @@ def execute_sql(query: str, user_id: str) -> List[Dict[str, Any]]:
         raise e
 
     return results
+
+def get_user_jars(user_id: str) -> List[Dict[str, Any]]:
+    query = "SELECT * FROM user_jar_spending WHERE user_id = %s"
+    res = execute_sql(query, user_id)
+    return res
+    

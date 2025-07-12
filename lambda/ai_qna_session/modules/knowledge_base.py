@@ -2,12 +2,9 @@ import boto3
 import os
 import logging
 from typing import List, Dict, Any
-
-# Configure logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize clients
 bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime', region_name = os.environ.get("REGION_NAME", "ap-southeast-2"))
 KNOWLEDGE_BASE_ID = os.environ.get("KNOWLEDGE_BASE_ID", "MNWC7LRVAI")
 

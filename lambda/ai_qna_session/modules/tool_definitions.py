@@ -12,7 +12,7 @@ def load_schema(filename: str) -> dict:
 
 # Load the schemas
 schema_jar_spending = load_schema('schema_user_jar_spending.json')
-schema_saving_goals   = load_schema('schema_saving_goals.json')
+schema_saving_goals  = load_schema('schema_saving_goals.json')
 
 # System prompt
 system_prompt = f"""You are a skilled AI assistant for a personal-finance app. You answer questions about a user’s goals, savings, spending, and our bank’s products. If the question is off-topic, reply that you cannot answer.

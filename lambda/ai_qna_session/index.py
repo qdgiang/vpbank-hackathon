@@ -4,6 +4,8 @@ import logging
 import traceback
 from typing import Dict, Any, List
 import os, sys
+import warnings
+warnings.filterwarnings("ignore")
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT_DIR)
@@ -15,10 +17,11 @@ import decimal
 from datetime import date, datetime
 import random
 import time
-import uuid
 from botocore.exceptions import ClientError
-from dotenv import load_dotenv
-load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
+os.environ["TZ"] = "Asia/Ho_Chi_Minh"
+time.tzset()
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -28,8 +31,8 @@ logging.basicConfig(level=logging.INFO,
                     ])
 logger = logging.getLogger(__name__)
 
-bedrock_client = boto3.client('bedrock-runtime', region_name=os.environ.get("REGION_NAME", "ap-southeast-2"))
-MODEL_ID = os.environ.get("MODEL_ID", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
+bedrock_client = boto3.client('bedrock-runtime', region_name=os.environ.get("aws_region", "ap-southeast-2"))
+MODEL_ID = os.environ.get("bedrock_model_id", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
 
 tool_dispatcher = {
     "query_user_jar_spending": execute_sql,
@@ -77,20 +80,15 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
         body = json.loads(event.get('body', '{}'))
         user_id = body.get('user_id')
         prompt = body.get('prompt')
-        session_id = body.get('session_id')
 
         if not user_id or not prompt:
             return {'statusCode': 400, 'body': json.dumps({'error': 'user_id and prompt are required.'})}
 
-        if not session_id:
-            session_id = str(uuid.uuid4())
-            logger.info(f"New conversation started. Assigning session_id: {session_id}")
-
-        chat_history = load_chat_history(session_id)
+        chat_history = load_chat_history()
         contextual_prompt = format_prompt_with_history(chat_history, prompt)
 
         # 1) PLAN – ask model which tools to use based on the contextual prompt
-        logger.info(f"[PLAN] Asking model for tool plan for user '{user_id}' in session '{session_id}'")
+        logger.info(f"[PLAN] Asking model for tool plan for user '{user_id}'")
         plan_resp = bedrock_with_retry(
             bedrock_client,
             modelId=MODEL_ID,
@@ -105,12 +103,12 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
         if not tool_calls:
             logger.info("[FINAL] No tools needed. Returning direct answer.")
             final_answer = "".join([c.get('text', '') for c in plan_message['content']])
-            save_to_chat_history(session_id, prompt, final_answer, [])
-            response_body = {"session_id": session_id, "user_id": user_id, "query": prompt, "answer": final_answer, "used_tools": []}
+            save_to_chat_history(prompt, final_answer, [])
+            response_body = {"user_id": user_id, "query": prompt, "answer": final_answer, "used_tools": []}
             return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps(response_body, default=str)}
 
         # 2) EXECUTE all planned tools with a retry mechanism for failures
-        logger.info(f"[EXECUTE] Executing {len(tool_calls)} tool(s) for session '{session_id}'.")
+        logger.info(f"[EXECUTE] Got {len(tool_calls)} tool call(s). Executing them in batch.")
         tool_results_content = [None] * len(tool_calls)
         used_tools_log = [None] * len(tool_calls)
         
@@ -181,7 +179,6 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
                         idx = call_map[original_call_id]['idx']
                         try:
                             result = sanitize(tool_dispatcher[tool_name](query=tool_query, user_id=user_id))
-                            # Replace error with success
                             tool_results_content[idx] = {'toolResult': {'toolUseId': original_call_id, 'content': [{'json': {'results': result}}]}}
                             used_tools_log[idx] = {"tool_name": tool_name, "query": tool_query, "results": result}
                             logger.info(f"Successfully re-executed and corrected tool '{tool_name}'.")
@@ -192,7 +189,7 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
                             used_tools_log[idx]['error'] = error_message
 
         # 3) FINAL – send back results for the final answer
-        logger.info(f"[FINAL] Sending tool results back to model for session '{session_id}'.")
+        logger.info(f"[FINAL] Sending tool results back to model.")
         final_messages = [
             {'role': 'user', 'content': [{'text': contextual_prompt}]},
             plan_message,
@@ -206,12 +203,12 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
             toolConfig=tool_config
         )
         final_answer = "".join([c.get('text', '') for c in final_resp['output']['message']['content']])
-        logger.info(f"Final answer generated for session '{session_id}'")
+        logger.info(f"Final answer generated.")
 
         # Save the successful exchange to history
-        save_to_chat_history(session_id, prompt, final_answer, used_tools_log)
+        save_to_chat_history(prompt, final_answer, used_tools_log)
 
-        response_body = {"session_id": session_id, "user_id": user_id, "query": prompt, "answer": final_answer, "used_tools": used_tools_log}
+        response_body = {"user_id": user_id, "query": prompt, "answer": final_answer, "used_tools": used_tools_log}
         return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps(response_body, default=str)}
 
     except Exception as e:
@@ -219,27 +216,25 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
         return {'statusCode': 500, 'body': json.dumps({'error': 'An internal server error occurred.', 'details': str(e)})
         }
 
-if __name__ == "__main__":
-    session_id = "123"
-    user_id    = "USER1"
+# if __name__ == "__main__":
+#     user_id    = "USER1"
 
-    while True:
-        prompt = input("Enter your question (or type 'exit' to quit): ").strip()
-        if prompt.lower() == "exit":
-            print("Goodbye!")
-            break
+#     while True:
+#         prompt = input("Enter your question (or type 'exit' to quit): ").strip()
+#         if prompt.lower() == "exit":
+#             print("Goodbye!")
+#             break
 
-        test_event = {
-            "body": json.dumps({
-                "user_id": user_id,
-                "prompt": prompt,
-                "session_id": session_id
-            })
-        }
+#         test_event = {
+#             "body": json.dumps({
+#                 "user_id": user_id,
+#                 "prompt": prompt,
+#             })
+#         }
         
-        resp = handler(test_event, None)
-        body = json.loads(resp.get('body', '{}'))
-        answer = body.get('answer', '')
-        # used_tools = body.get('used_tools', [])
-        print("Answer:", answer)
-        # print("Used tools:", used_tools)
+#         resp = handler(test_event, None)
+#         body = json.loads(resp.get('body', '{}'))
+#         answer = body.get('answer', '')
+#         # used_tools = body.get('used_tools', [])
+#         print("Answer:", answer)
+#         # print("Used tools:", used_tools)
