@@ -74,3 +74,4 @@ resource "aws_lambda_function" "pause_goal" {
   tags = {
     Name = "${var.project_name}-pause-goal"
   }
+}
