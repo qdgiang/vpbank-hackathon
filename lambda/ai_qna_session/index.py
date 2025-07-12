@@ -80,11 +80,12 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
         body = json.loads(event.get('body', '{}'))
         user_id = body.get('user_id')
         prompt = body.get('prompt')
+        chat_history = body.get('history ', [])
 
         if not user_id or not prompt:
             return {'statusCode': 400, 'body': json.dumps({'error': 'user_id and prompt are required.'})}
 
-        chat_history = load_chat_history()
+        # chat_history = load_chat_history()
         contextual_prompt = format_prompt_with_history(chat_history, prompt)
 
         # 1) PLAN – ask model which tools to use based on the contextual prompt
@@ -103,9 +104,9 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
         if not tool_calls:
             logger.info("[FINAL] No tools needed. Returning direct answer.")
             final_answer = "".join([c.get('text', '') for c in plan_message['content']])
-            save_to_chat_history(prompt, final_answer, [])
-            response_body = {"user_id": user_id, "query": prompt, "answer": final_answer, "used_tools": []}
-            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps(response_body, default=str)}
+            # save_to_chat_history(prompt, final_answer, [])
+            response_body = {"answer": final_answer, "used_tools": []}
+            return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps(response_body, default=str, ensure_ascii=False)}
 
         # 2) EXECUTE all planned tools with a retry mechanism for failures
         logger.info(f"[EXECUTE] Got {len(tool_calls)} tool call(s). Executing them in batch.")
@@ -206,15 +207,14 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
         logger.info(f"Final answer generated.")
 
         # Save the successful exchange to history
-        save_to_chat_history(prompt, final_answer, used_tools_log)
+        # save_to_chat_history(prompt, final_answer, used_tools_log)
 
-        response_body = {"user_id": user_id, "query": prompt, "answer": final_answer, "used_tools": used_tools_log}
-        return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps(response_body, default=str)}
+        response_body = {"answer": final_answer, "used_tools": used_tools_log}
+        return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps(response_body, default=str, ensure_ascii=False)}
 
     except Exception as e:
         logger.error(f"An unexpected error occurred: {traceback.format_exc()}")
-        return {'statusCode': 500, 'body': json.dumps({'error': 'An internal server error occurred.', 'details': str(e)})
-        }
+        return {'statusCode': 500, 'body': json.dumps({'error': 'An internal server error occurred.', 'details': str(e)})}
 
 # if __name__ == "__main__":
 #     user_id    = "USER1"

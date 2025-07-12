@@ -262,21 +262,21 @@ def handler(event, context):
         return {
             "statusCode": 200,
             "headers": {"Content-Type": "application/json"},
-            "body": json.dumps(response_body, default=str)
+            "body": json.dumps(response_body, default=str, ensure_ascii=False)
         }
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": str(e)})
+            "body": json.dumps({"error": str(e)}, ensure_ascii=False)
         }
 
-if __name__ == "__main__":
-    # test
-    test_event = {
-        "body": json.dumps({
-            "user_id": "USER1"
-        })
-    }
-    handler(test_event, None)
+# if __name__ == "__main__":
+#     # test
+#     test_event = {
+#         "body": json.dumps({
+#             "user_id": "USER1"
+#         })
+#     }
+#     handler(test_event, None)
