@@ -6,14 +6,12 @@ import boto3
 from datetime import datetime, date
 import pytz
 import time
-import pandas as pd
 os.environ["TZ"] = "Asia/Ho_Chi_Minh"
 time.tzset()
-from dotenv import load_dotenv
-load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
 
 VN_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
@@ -22,21 +20,22 @@ logging.basicConfig(level=logging.INFO,
                     ])
 logger = logging.getLogger(__name__)
 
-# for testing
-os.environ["AWS_PROFILE"] = "hackathon"
+# Env var
+knowledge_base_id = os.environ.get("bedrock_kb_id", "MNWC7LRVAI")
+model_arn = os.environ.get("bedrock_model_id", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
 
 # Initialize AWS clients
-bedrock_agent_runtime_client = boto3.client(service_name='bedrock-agent-runtime', region_name=os.environ.get("REGION_NAME", "ap-southeast-2"))
-bedrock_runtime_client = boto3.client(service_name='bedrock-runtime', region_name=os.environ.get("REGION_NAME", "ap-southeast-2"))
+bedrock_agent_runtime_client = boto3.client(service_name='bedrock-agent-runtime', region_name=os.environ.get("aws_region", "ap-southeast-2"))
+bedrock_runtime_client = boto3.client(service_name='bedrock-runtime', region_name=os.environ.get("aws_region", "ap-southeast-2"))
 
 def get_db_connection():
     """Establishes a connection to the RDS MySQL database."""
     try:
-        db_host = os.environ.get('DB_HOST', '127.0.0.1')
-        db_port = int(os.environ.get('DB_PORT', 3307))
-        db_name = os.environ.get('DB_NAME', 'testdb')
-        db_user = os.environ.get('DB_USER', 'root')
-        db_password = os.environ.get('DB_PASSWORD', '')
+        db_host = os.environ.get('db_host', '127.0.0.1')
+        db_port = int(os.environ.get('db_port', 3307))
+        db_name = os.environ.get('db_name', 'testdb')
+        db_user = os.environ.get('db_user', 'root')
+        db_password = os.environ.get('db_password', '')
 
         logger.info(f"Connecting to database: {db_name} at {db_host}:{db_port}")
         connection = pymysql.connect(
@@ -55,7 +54,7 @@ def get_db_connection():
 
 def get_active_goals(cursor, user_id):
     """Fetches active savings goals for a given user from the database."""
-    query = "SELECT * FROM saving_goals WHERE user_id = %s AND status = 1"
+    query = "SELECT * FROM saving_goals WHERE user_id = %s AND is_active = TRUE"
     logger.info(f"Executing query for user_id: {user_id}")
     cursor.execute(query, (user_id,))
     goals = cursor.fetchall()
@@ -124,7 +123,6 @@ def analyze_goals(goals):
 
 # LLM Invoke
 def _invoke_llm(prompt, model_arn):
-    """Invokes the Bedrock LLM to generate text using the Messages API."""
     try:
         logger.info(f"Invoking model: {model_arn}")
 
@@ -169,9 +167,9 @@ def generate_financial_advice(analysis_results, knowledge_base_id, model_arn):
         analysis_summary = []
         for goal in analysis_results:
             summary_line = (
-                f"- Mục tiêu '{goal['goal_name']}': Trạng thái '{goal['on_track_status']}'. "
-                f"Tiết kiệm cần thiết hàng tháng hiện tại là {goal['current_monthly_saving_needed']:,.0f} VND, "
-                f"so với ban đầu là {goal['initial_monthly_saving_needed']:,.0f} VND."
+                f"- Goal '{goal['goal_name']}': Status '{goal['on_track_status']}'. "
+                f"Current monthly saving needed is {goal['current_monthly_saving_needed']:,.0f} VND, "
+                f"compared to the initial monthly saving needed {goal['initial_monthly_saving_needed']:,.0f} VND."
             )
             analysis_summary.append(summary_line)
         analysis_text = "\n".join(analysis_summary)
@@ -244,10 +242,6 @@ def handler(event, context):
 
         if not user_id:
             return {"statusCode": 400, "body": json.dumps("Error: user_id is required.")}
-
-        # Env var đã set up sẵn
-        knowledge_base_id = os.environ.get("KNOWLEDGE_BASE_ID", "MNWC7LRVAI")
-        model_arn = os.environ.get("BEDROCK_MODEL_ARN", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
 
         connection = get_db_connection()
         with connection.cursor() as cursor:
