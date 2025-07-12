@@ -46,12 +46,14 @@ resource "aws_lambda_function" "ai_qna_session" {
 
   environment {
     variables = {
-      DB_HOST     = aws_db_instance.main.address
-      DB_USER     = var.db_username
-      DB_PASSWORD = var.db_password
-      DB_NAME     = var.db_name
-      MODEL_ID    = var.bedrock_model_id
-      REGION_NAME = var.bedrock_region
+      DB_HOST          = aws_db_instance.main.address
+      DB_PORT          = aws_db_instance.main.port
+      DB_NAME          = var.db_name
+      DB_USER          = var.db_username
+      DB_PASSWORD      = var.db_password
+      AWS_REGION       = var.aws_region
+      BEDROCK_MODEL_ID = var.bedrock_model_id
+      BEDROCK_KB_ID    = var.bedrock_kb_id
     }
   }
 

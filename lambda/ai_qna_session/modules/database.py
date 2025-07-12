@@ -6,10 +6,11 @@ from typing import List, Dict, Any
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-DB_HOST = os.environ.get("db_host", "127.0.0.1")
-DB_USER = os.environ.get("db_user", "root")
-DB_PASSWORD = os.environ.get("db_password", "")
-DB_NAME = os.environ.get("db_name", 'testdb')
+DB_HOST_RAW = os.environ.get("DB_HOST", "127.0.0.1")
+DB_HOST = DB_HOST_RAW.split(":")[0]
+DB_USER = os.environ.get("DB_USER", "root")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+DB_NAME = os.environ.get("DB_NAME", 'testdb')
 DB_PORT = int(os.environ.get('DB_PORT', 3307))
 
 # Global variable for the database connection

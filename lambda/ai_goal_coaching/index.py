@@ -21,21 +21,22 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 # Env var
-knowledge_base_id = os.environ.get("bedrock_kb_id", "MNWC7LRVAI")
-model_arn = os.environ.get("bedrock_model_id", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
+knowledge_base_id = os.environ.get("BEDROCK_KB_ID", "MNWC7LRVAI")
+model_arn = os.environ.get("BEDROCK_MODEL_ID", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
 
 # Initialize AWS clients
-bedrock_agent_runtime_client = boto3.client(service_name='bedrock-agent-runtime', region_name=os.environ.get("aws_region", "ap-southeast-2"))
-bedrock_runtime_client = boto3.client(service_name='bedrock-runtime', region_name=os.environ.get("aws_region", "ap-southeast-2"))
+bedrock_agent_runtime_client = boto3.client(service_name='bedrock-agent-runtime', region_name=os.environ.get("AWS_REGION", "ap-southeast-2"))
+bedrock_runtime_client = boto3.client(service_name='bedrock-runtime', region_name=os.environ.get("AWS_REGION", "ap-southeast-2"))
 
 def get_db_connection():
     """Establishes a connection to the RDS MySQL database."""
     try:
-        db_host = os.environ.get('db_host', '127.0.0.1')
-        db_port = int(os.environ.get('db_port', 3307))
-        db_name = os.environ.get('db_name', 'testdb')
-        db_user = os.environ.get('db_user', 'root')
-        db_password = os.environ.get('db_password', '')
+        db_host_raw = os.environ.get('DB_HOST', '127.0.0.1')
+        db_host = db_host_raw.split(":")[0]
+        db_port = int(os.environ.get('DB_PORT', 3307))
+        db_name = os.environ.get('DB_NAME', 'testdb')
+        db_user = os.environ.get('DB_USER', 'root')
+        db_password = os.environ.get('DB_PASSWORD', '')
 
         logger.info(f"Connecting to database: {db_name} at {db_host}:{db_port}")
         connection = pymysql.connect(
