@@ -21,6 +21,8 @@ terraform.tfstate.backup
 
 # testing
 /coverage
+**test**
+**mock**
 
 # production
 build
@@ -43,3 +45,4 @@ yarn-error.log*
 
 sagemaker_pipeline/run_test.sh
 sagemaker_pipeline/docker/models/*.bin
+**/__pycache__/**
