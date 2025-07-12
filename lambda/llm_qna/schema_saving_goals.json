@@ -1,0 +1,28 @@
+{
+  "table": "saving_goals",
+  "description": "Stores information about the user's saving goals, including progress, priority, status, and deadlines.",
+  "columns": {
+    "goal_id": "CHAR(36) – Unique identifier for the goal (PRIMARY KEY), defaults to UUID()",
+    "user_id": "CHAR(36) – References users(user_id), ON DELETE CASCADE",
+    "goal_name": "VARCHAR(255) – Name of the goal (e.g., 'Buy a house', 'Trip to Japan')",
+    "target_amount": "NUMERIC(15,2) – Target amount to be saved, must be > 0",
+    "current_amount": "NUMERIC(15,2) – Current amount saved, must be ≥ 0, defaults to 0.00",
+    "target_date": "DATE – Deadline to achieve the goal",
+    "goal_type": "VARCHAR(20) – Type of goal (e.g., 'SHORT_TERM', 'LONG_TERM')",
+    "priority_level": "INTEGER – Priority level (1, 2, or 3)",
+    "weight": "NUMERIC(5,2) – Percentage of the user’s monthly income allocated to this goal’s jar (auto-calculated for active goals)",
+    "status": "INTEGER – Status flag (0=inactive/deleted, 1=active, 2=completed)",
+    "eta_lock": "BOOLEAN – Whether the initial_target_date is locked, defaults to FALSE",
+    "initial_target_date": "DATE – Initial deadline (used to evaluate delays or advances)",
+    "sent_money": "BOOLEAN – Whether the money has been disbursed, defaults to FALSE",
+    "created_at": "TIMESTAMP – Record creation timestamp, defaults to CURRENT_TIMESTAMP",
+    "updated_at": "TIMESTAMP – Last update timestamp, defaults to CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+  },
+  "primary_key": ["goal_id"],
+  "foreign_keys": [
+    {
+      "column": "user_id",
+      "references": "users(user_id)"
+    }
+  ]
+}

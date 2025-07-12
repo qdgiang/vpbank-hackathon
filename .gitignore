@@ -21,6 +21,8 @@ terraform.tfstate.backup
 
 # testing
 /coverage
+**test**
+**mock**
 
 # production
 build
@@ -40,3 +42,5 @@ lambda/**/*layer*.zip
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+**/__pycache__/**
