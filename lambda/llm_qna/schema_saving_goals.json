@@ -11,7 +11,7 @@
     "goal_type": "VARCHAR(20) – Type of goal (e.g., 'SHORT_TERM', 'LONG_TERM')",
     "priority_level": "INTEGER – Priority level (1, 2, or 3)",
     "weight": "NUMERIC(5,2) – Percentage of the user’s monthly income allocated to this goal’s jar (auto-calculated for active goals)",
-    "status": "INTEGER – Status flag (0=inactive/deleted, 1=active, 2=completed)",
+    "is_active": "BOOLEAN – Whether the goal is active, defaults to TRUE",
     "eta_lock": "BOOLEAN – Whether the initial_target_date is locked, defaults to FALSE",
     "initial_target_date": "DATE – Initial deadline (used to evaluate delays or advances)",
     "sent_money": "BOOLEAN – Whether the money has been disbursed, defaults to FALSE",
