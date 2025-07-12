@@ -87,3 +87,16 @@ variable "bastion_instance_type" {
   type        = string
   default     = "t2.micro"
 }
+
+# Bedrock Configuration
+variable "bedrock_model_id" {
+  description = "The model ID for the Bedrock Converse API"
+  type        = string
+  default     = "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0"
+}
+
+variable "bedrock_kb_id" {
+  description = "The knowledge base ID for the Bedrock Converse API"
+  type        = string
+  default     = "MNWC7LRVAI"
+}
