@@ -1,19 +1,22 @@
 import os
 import json
-import psycopg2
+import pymysql
 import logging
 from datetime import datetime
+from decimal import Decimal
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-DB_CONFIG = {
-    "host":     os.environ["DB_HOST"],
-    "port":     int(os.environ.get("DB_PORT", 5432)),
-    "dbname":   os.environ["DB_NAME"],
-    "user":     os.environ["DB_USER"],
-    "password": os.environ["DB_PASSWORD"]
-}
+def get_db_connection():
+    return pymysql.connect(
+        host=os.environ['DB_HOST'],
+        port=int(os.environ['DB_PORT']),
+        user=os.environ['DB_USER'],
+        password=os.environ['DB_PASSWORD'],
+        database=os.environ['DB_NAME'],
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
 def pause_goal(goal_id, user_id):
     BASE_WEIGHT_POOL = {1: 50, 2: 30, 3: 20}
@@ -23,6 +26,8 @@ def pause_goal(goal_id, user_id):
 
     def calc_monthly_required(target, current, months):
         if months <= 0: return None
+        target = float(target)
+        current = float(current)
         factor = (1 + rate) ** months
         try:
             numerator = target - current * factor
@@ -33,6 +38,9 @@ def pause_goal(goal_id, user_id):
 
     def calc_eta(target, current, monthly):
         if monthly <= 0: return None
+        target = float(target)
+        current = float(current)
+        monthly = float(monthly)
         n = 1
         while n < 600:
             factor = (1 + rate) ** n
@@ -42,7 +50,7 @@ def pause_goal(goal_id, user_id):
             n += 1
         return None
 
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = get_db_connection()
     cur = conn.cursor()
 
     try:
@@ -107,6 +115,12 @@ def pause_goal(goal_id, user_id):
                 "monthly_required": mth_required,
                 "eta_months": eta_months
             })
+
+        # Convert any Decimal in recalc_results to float
+        for goal in recalc_results:
+            for k, v in goal.items():
+                if isinstance(v, Decimal):
+                    goal[k] = float(v)
 
         conn.commit()
         return {

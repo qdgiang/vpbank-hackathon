@@ -1,6 +1,6 @@
 import os
 import json
-import psycopg2
+import pymysql
 from datetime import datetime, date
 from decimal import Decimal
 import logging
@@ -10,14 +10,15 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # === DB CONFIG from ENV variables ===
-DB_CONFIG = {
-    "host":     os.environ["DB_HOST"],
-    "port":     int(os.environ.get("DB_PORT", 5432)),
-    "dbname":   os.environ["DB_NAME"],
-    "user":     os.environ["DB_USER"],
-    "password": os.environ["DB_PASSWORD"]
-}
-
+def get_db_connection():
+    return pymysql.connect(
+        host=os.environ['DB_HOST'],
+        port=int(os.environ['DB_PORT']),
+        user=os.environ['DB_USER'],
+        password=os.environ['DB_PASSWORD'],
+        database=os.environ['DB_NAME'],
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
 def create_goal(data, user_id):
     BASE_WEIGHT_POOL = {1: 50, 2: 30, 3: 20}
@@ -26,6 +27,8 @@ def create_goal(data, user_id):
 
     def calculate_monthly_required(target, current, months):
         if months <= 0: return None
+        target = float(target)
+        current = float(current)
         factor = (1 + rate) ** months
         try:
             numerator = target - current * factor
@@ -36,6 +39,9 @@ def create_goal(data, user_id):
 
     def calculate_eta(target, current, monthly):
         if monthly <= 0: return None
+        target = float(target)
+        current = float(current)
+        monthly = float(monthly)
         n = 1
         while n < 600:
             factor = (1 + rate) ** n
@@ -55,7 +61,7 @@ def create_goal(data, user_id):
             logger.error(msg)
             return {"status": "error", "message": msg}
 
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = get_db_connection()
     cur = conn.cursor()
     now = datetime.now()
 

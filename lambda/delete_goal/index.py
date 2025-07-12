@@ -1,18 +1,19 @@
-import os, json, psycopg2, logging
+import os, json, logging, pymysql
 from datetime import datetime, date
 from decimal import Decimal
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-DB_CONFIG = {
-    "host":     os.environ["DB_HOST"],
-    "port":     int(os.environ.get("DB_PORT", 5432)),
-    "dbname":   os.environ["DB_NAME"],
-    "user":     os.environ["DB_USER"],
-    "password": os.environ["DB_PASSWORD"]
-}
-
+def get_db_connection():
+    return pymysql.connect(
+        host=os.environ['DB_HOST'],
+        port=int(os.environ['DB_PORT']),
+        user=os.environ['DB_USER'],
+        password=os.environ['DB_PASSWORD'],
+        database=os.environ['DB_NAME'],
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
 def delete_goal(goal_id, user_id):
     BASE_WEIGHT_POOL = {1: 50, 2: 30, 3: 20}
@@ -22,6 +23,8 @@ def delete_goal(goal_id, user_id):
 
     def calc_monthly_required(target, current, months):
         if months <= 0: return None
+        target = float(target)
+        current = float(current)
         factor = (1 + rate) ** months
         try:
             numerator = target - current * factor
@@ -31,6 +34,9 @@ def delete_goal(goal_id, user_id):
             return None
 
     def calc_eta(target, current, monthly):
+        target = float(target)
+        current = float(current)
+        monthly = float(monthly)
         if monthly <= 0: return None
         n = 1
         while n < 600:
@@ -41,16 +47,15 @@ def delete_goal(goal_id, user_id):
             n += 1
         return None
 
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = get_db_connection()
     cur = conn.cursor()
 
     try:
         # 1. Mark the goal as inactive instead of deleting
         cur.execute("""
-            UPDATE saving_goals
-               SET status = 0, updated_at = %s
+            DELETE FROM saving_goals
              WHERE goal_id = %s AND user_id = %s AND status = 1
-        """, (now, goal_id, user_id))
+        """, (goal_id, user_id))
         if cur.rowcount == 0:
             return {"status": "error", "message": "Goal not found or already inactive."}
         logger.info(f"Marked goal {goal_id} as inactive for user {user_id}")
@@ -102,10 +107,16 @@ def delete_goal(goal_id, user_id):
             eta_months  = calc_eta(tgt_amt, curr_amt, mth_required)
             recalc_results.append({
                 "goal_id": gid,
-                "new_weight": weight,
+                "new_weight": float(weight) if isinstance(weight, Decimal) else weight,
                 "monthly_required": mth_required,
                 "eta_months": eta_months
             })
+
+        # Convert any Decimal in recalc_results to float
+        for goal in recalc_results:
+            for k, v in goal.items():
+                if isinstance(v, Decimal):
+                    goal[k] = float(v)
 
         conn.commit()
         return {
@@ -139,6 +150,7 @@ def lambda_handler(event, context):
             }
 
         result = delete_goal(goal_id, user_id)
+        # Use default encoder, as all Decimals are now converted
         return {
             "statusCode": 200,
             "body": json.dumps(result)
