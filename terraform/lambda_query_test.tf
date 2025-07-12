@@ -64,7 +64,7 @@ resource "aws_iam_role_policy" "lambda_rds_access" {
 # Lambda layer for query_test function
 resource "null_resource" "query_test_lambda_layer" {
   triggers = {
-    requirements = filebase64("${path.module}/../lambda/query_test/requirements.txt")
+    requirements = filemd5("${path.module}/../lambda/query_test/requirements.txt")
   }
 
   provisioner "local-exec" {
@@ -98,7 +98,7 @@ resource "aws_lambda_layer_version" "query_test_python_packages_layer" {
 # Null resource to control lambda updates based on source file changes
 resource "null_resource" "query_test_lambda_source_hash" {
   triggers = {
-    source_code = filebase64("${path.module}/../lambda/query_test/index.py")
+    source_code = filemd5("${path.module}/../lambda/query_test/index.py")
   }
 }
 

@@ -1,7 +1,7 @@
 # Lambda layer for query_jar function
 resource "null_resource" "query_jar_lambda_layer" {
   triggers = {
-    requirements = filebase64("${path.module}/../lambda/query_jar/requirements.txt")
+    requirements = filemd5("${path.module}/../lambda/query_jar/requirements.txt")
   }
 
   provisioner "local-exec" {
@@ -35,7 +35,7 @@ resource "aws_lambda_layer_version" "query_jar_python_packages_layer" {
 # Null resource to control lambda updates based on source file changes
 resource "null_resource" "query_jar_lambda_source_hash" {
   triggers = {
-    source_code = filebase64("${path.module}/../lambda/query_jar/index.py")
+    source_code = filemd5("${path.module}/../lambda/query_jar/index.py")
   }
 }
 
