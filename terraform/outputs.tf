@@ -102,3 +102,19 @@ output "db_connection_command" {
   description = "mysql command to connect to database via bastion"
   value       = "mysql -h ${aws_db_instance.mysql.endpoint} -u ${aws_db_instance.mysql.username} -p ${aws_db_instance.mysql.db_name}"
 }
+
+# Query Test API Gateway outputs
+output "query_test_api_gateway_id" {
+  description = "Query Test API Gateway ID"
+  value       = aws_api_gateway_rest_api.test_api.id
+}
+
+output "query_test_api_gateway_url" {
+  description = "Query Test API Gateway URL"
+  value       = "https://${aws_api_gateway_rest_api.test_api.id}.execute-api.${var.aws_region}.amazonaws.com/api/test"
+}
+
+output "query_test_api_gateway_name" {
+  description = "Query Test API Gateway name"
+  value       = aws_api_gateway_rest_api.test_api.name
+}
