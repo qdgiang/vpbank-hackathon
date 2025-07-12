@@ -19,7 +19,7 @@ def format_prompt_with_history(chat_history: List[Dict[str, Any]], new_prompt: s
     recent_history = chat_history[-6:]
     
     formatted_history = "\n".join([
-        f"User: {entry['user_prompt']}\nAI: {entry['ai_answer']}"
+        f"User: {entry['user_prompt']}\nAI: {entry['ai_answer']}\nUsed tools: {entry['used_tools']}"
         for entry in recent_history
     ])
 
