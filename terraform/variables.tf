@@ -100,3 +100,22 @@ variable "bedrock_kb_id" {
   type        = string
   default     = "MNWC7LRVAI"
 }
+
+# --- Lambda Configuration ---
+variable "python_runtime" {
+  description = "Python runtime for Lambda functions"
+  type        = string
+  default     = "python3.9"
+}
+
+variable "lambda_timeout" {
+  description = "Default timeout for Lambda functions in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "lambda_memory_size" {
+  description = "Default memory size for Lambda functions in MB"
+  type        = number
+  default     = 256
+}

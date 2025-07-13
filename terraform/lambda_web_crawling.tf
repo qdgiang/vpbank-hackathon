@@ -1,9 +1,41 @@
 # --- Resources for web_crawling Lambda ---
 
+# Lambda layer for web_crawling function
+resource "null_resource" "web_crawling_lambda_layer" {
+  triggers = {
+    requirements = filemd5("${path.module}/../lambda/web_crawling/requirements.txt")
+  }
+
+  provisioner "local-exec" {
+    command = <<EOF
+      rm -rf ${path.module}/../lambda/web_crawling/layer
+      mkdir -p ${path.module}/../lambda/web_crawling/layer/python
+      pip install -r ${path.module}/../lambda/web_crawling/requirements.txt -t ${path.module}/../lambda/web_crawling/layer/python
+    EOF
+  }
+}
+
+data "archive_file" "web_crawling_lambda_layer_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/web_crawling/layer"
+  output_path = "${path.module}/../lambda/web_crawling/lambda-layer.zip"
+  
+  depends_on = [null_resource.web_crawling_lambda_layer]
+}
+
+resource "aws_lambda_layer_version" "web_crawling_layer" {
+  filename            = data.archive_file.web_crawling_lambda_layer_zip.output_path
+  layer_name          = "${var.project_name}-web-crawling-layer"
+  compatible_runtimes = [var.python_runtime]
+  source_code_hash    = data.archive_file.web_crawling_lambda_layer_zip.output_base64sha256
+}
+
+# Lambda function code archive
 data "archive_file" "web_crawling_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../lambda/web_crawling"
-  output_path = "${path.module}/../lambda/web_crawling.zip"
+  output_path = "${path.module}/../lambda/web_crawling/lambda.zip"
+  excludes    = ["requirements.txt", "layer/", "test.py"]
 }
 
 resource "aws_iam_role" "web_crawling_lambda_role" {
@@ -38,9 +70,5 @@ resource "aws_lambda_function" "web_crawling" {
 
   filename         = data.archive_file.web_crawling_zip.output_path
   source_code_hash = data.archive_file.web_crawling_zip.output_base64sha256
-}
-
-resource "aws_cloudwatch_log_group" "web_crawling_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.web_crawling.function_name}"
-  retention_in_days = 14
+  layers           = [aws_lambda_layer_version.web_crawling_layer.arn]
 }
