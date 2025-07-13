@@ -1,5 +1,5 @@
 import os, json, logging, pymysql
-from datetime import datetime, date
+from datetime import datetime
 from decimal import Decimal
 
 logger = logging.getLogger()
@@ -16,145 +16,77 @@ def get_db_connection():
     )
 
 def delete_goal(goal_id, user_id):
-    BASE_WEIGHT_POOL = {1: 50, 2: 30, 3: 20}
-    TIER_UNIT_WEIGHTS = {1: 5, 2: 3, 3: 2}
     rate = 1.02 ** (1 / 12) - 1
     now = datetime.now()
-
-    def calc_monthly_required(target, current, months):
-        if months <= 0: return None
-        target = float(target)
-        current = float(current)
-        factor = (1 + rate) ** months
-        try:
-            numerator = target - current * factor
-            denominator = (factor - 1) / rate
-            return round(numerator / denominator, 2)
-        except ZeroDivisionError:
-            return None
-
-    def calc_eta(target, current, monthly):
-        target = float(target)
-        current = float(current)
-        monthly = float(monthly)
-        if monthly <= 0: return None
-        n = 1
-        while n < 600:
-            factor = (1 + rate) ** n
-            fv = current * factor + monthly * (factor - 1) / rate
-            if fv >= target:
-                return n
-            n += 1
-        return None
 
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        # 1. Mark the goal as inactive instead of deleting
+        # 1. Delete goal
         cur.execute("""
             DELETE FROM saving_goals
              WHERE goal_id = %s AND user_id = %s AND status = 1
         """, (goal_id, user_id))
         if cur.rowcount == 0:
             return {"status": "error", "message": "Goal not found or already inactive."}
-        logger.info(f"Marked goal {goal_id} as inactive for user {user_id}")
 
         # 2. Fetch remaining active goals
         cur.execute("""
-            SELECT goal_id, priority_level FROM saving_goals
-             WHERE user_id = %s AND status = 1
-        """, (user_id,))
-        rows = cur.fetchall()
-
-        pri_map = {1: [], 2: [], 3: []}
-        for gid, lvl in rows:
-            pri_map[lvl].append(gid)
-
-        present = [p for p in pri_map if pri_map[p]]
-        total_base = sum(BASE_WEIGHT_POOL[p] for p in present)
-        missing = 100 - total_base
-        total_units = sum(TIER_UNIT_WEIGHTS[p] for p in present)
-
-        new_weights = {}
-        for p in present:
-            ids = pri_map[p]
-            count = len(ids)
-            base = BASE_WEIGHT_POOL[p] / count
-            redist = (missing * TIER_UNIT_WEIGHTS[p] / total_units) / count if count else 0
-            for gid in ids:
-                new_weights[gid] = round((base + redist) / 100, 5)
-
-        # 3. Update weights in DB
-        for gid, w in new_weights.items():
-            cur.execute("""
-                UPDATE saving_goals SET weight = %s, updated_at = %s
-                 WHERE goal_id = %s
-            """, (w, now, gid))
-
-        # 4. Fetch and recalculate monthly & ETA
-        cur.execute("""
-            SELECT goal_id, target_amount, current_amount, target_date, weight
+            SELECT goal_id, month_req
               FROM saving_goals
              WHERE user_id = %s AND status = 1
         """, (user_id,))
-        goals = cur.fetchall()
+        updated_goals = cur.fetchall()
 
-        recalc_results = []
-        for gid, tgt_amt, curr_amt, tgt_date, weight in goals:
-            months_left = max(1, (tgt_date - now.date()).days // 30)
-            mth_required = calc_monthly_required(tgt_amt, curr_amt, months_left)
-            eta_months  = calc_eta(tgt_amt, curr_amt, mth_required)
-            recalc_results.append({
-                "goal_id": gid,
-                "new_weight": float(weight) if isinstance(weight, Decimal) else weight,
-                "monthly_required": mth_required,
-                "eta_months": eta_months
-            })
+        if not updated_goals:
+            return {
+                "status": "success",
+                "message": f"Goal {goal_id} deleted. No remaining active goals.",
+            }
 
-        # Convert any Decimal in recalc_results to float
-        for goal in recalc_results:
-            for k, v in goal.items():
-                if isinstance(v, Decimal):
-                    goal[k] = float(v)
+        # 3. Recalculate weights based on existing month_req values
+        total_req = sum(float(g["month_req"]) for g in updated_goals if g["month_req"] and g["month_req"] > 0)
+
+        for g in updated_goals:
+            gid = g["goal_id"]
+            req = float(g["month_req"]) if g["month_req"] else 0
+            weight = round(req / total_req, 5) if total_req > 0 else round(1 / len(updated_goals), 5)
+            cur.execute("""
+                UPDATE saving_goals
+                   SET weight = %s, updated_at = %s
+                 WHERE goal_id = %s
+            """, (weight, now, gid))
 
         conn.commit()
         return {
             "status": "success",
-            "message": f"Goal {goal_id} deleted. Remaining goals recalculated.",
-            "goals": recalc_results
+            "message": f"Goal {goal_id} deleted. Weights updated .",
         }
 
     except Exception as e:
         conn.rollback()
-        logger.exception("Error in delete_goal")
+        logger.exception("Error in delete_goal for user_id %s and goal_id %s", user_id, goal_id)
         return {"status": "error", "message": str(e)}
-
     finally:
         cur.close()
         conn.close()
 
+
 def lambda_handler(event, context):
     try:
-        # Support both direct dict and API Gateway event
-        body = event if isinstance(event, dict) else json.loads(event.get("body", event))
+        body = json.loads(event["body"]) if "body" in event else event
         goal_id = body.get("goal_id")
         user_id = body.get("user_id")
 
         if not goal_id or not user_id:
-            msg = "Missing goal_id or user_id"
-            logger.error(msg)
             return {
                 "statusCode": 400,
-                "body": json.dumps({"status": "error", "message": msg})
+                "body": json.dumps({"status": "error", "message": "Missing goal_id or user_id"})
             }
 
         result = delete_goal(goal_id, user_id)
-        # Use default encoder, as all Decimals are now converted
-        return {
-            "statusCode": 200,
-            "body": json.dumps(result)
-        }
+        return {"statusCode": 200, "body": json.dumps(result)}
 
     except Exception as e:
         logger.exception("Unhandled exception in lambda_handler")

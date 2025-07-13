@@ -12,8 +12,9 @@ CREATE TABLE goal_setting
     weight              NUMERIC(5,2),
     is_active           BOOLEAN                   DEFAULT TRUE,
     eta_lock            BOOLEAN                   DEFAULT FALSE,
-    initial_target_date DATE,
+    initial_target_date DATE,                                        NOT NULL,
     sent_money          BOOLEAN                   DEFAULT FALSE,
+    month_req           NUMERIC(15,2)                                NOT NULL,
     created_at          TIMESTAMP                 DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP                 DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT valid_amounts 
