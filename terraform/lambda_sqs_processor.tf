@@ -106,12 +106,12 @@ data "archive_file" "sqs_processor_lambda_zip" {
 resource "aws_lambda_function" "sqs_processor" {
   filename         = data.archive_file.sqs_processor_lambda_zip.output_path
   function_name    = "${var.project_name}-sqs-processor"
-  role            = aws_iam_role.sqs_processor_lambda_execution.arn
-  handler         = "index.handler"
-  runtime         = "python3.9"
-  timeout         = 30
+  role             = aws_iam_role.sqs_processor_lambda_execution.arn
+  handler          = "index.handler"
+  runtime          = "python3.9"
+  timeout          = 30
   source_code_hash = null_resource.sqs_processor_lambda_source_hash.triggers.source_code
-  layers          = [aws_lambda_layer_version.sqs_processor_python_packages_layer.arn]
+  layers           = [aws_lambda_layer_version.sqs_processor_python_packages_layer.arn]
 
   vpc_config {
     subnet_ids         = aws_subnet.private[*].id

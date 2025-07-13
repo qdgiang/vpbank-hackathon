@@ -16,6 +16,12 @@ variable "aws_secret_access_key" {
   sensitive   = true
 }
 
+variable "s3_crawl_bucket_name" {
+  description = "The name of the S3 bucket to store web crawling results."
+  type        = string
+  default     = "vpb-finserv-web"
+}
+
 variable "project_name" {
   description = "Name of the project"
   type        = string
@@ -86,4 +92,36 @@ variable "bastion_instance_type" {
   description = "EC2 instance type for bastion host"
   type        = string
   default     = "t2.micro"
+}
+
+# Bedrock Configuration
+variable "bedrock_model_id" {
+  description = "The model ID for the Bedrock Converse API"
+  type        = string
+  default     = "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0"
+}
+
+variable "bedrock_kb_id" {
+  description = "The knowledge base ID for the Bedrock Converse API"
+  type        = string
+  default     = "TARE1HFTXP"
+}
+
+# --- Lambda Configuration ---
+variable "python_runtime" {
+  description = "Python runtime for Lambda functions"
+  type        = string
+  default     = "python3.9"
+}
+
+variable "lambda_timeout" {
+  description = "Default timeout for Lambda functions in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "lambda_memory_size" {
+  description = "Default memory size for Lambda functions in MB"
+  type        = number
+  default     = 256
 }
