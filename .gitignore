@@ -21,6 +21,8 @@ terraform.tfstate.backup
 
 # testing
 /coverage
+**mock**
+**test**
 
 # production
 build
@@ -45,3 +47,8 @@ sagemaker_pipeline/run_test.sh
 sagemaker_pipeline/docker/models/*.bin
 sagemaker_pipeline/test/data
 .idea/inspectionProfiles/Project_Default.xml
+
+# temp file store 
+**/temp_file_store
+
+**/__pycache__
