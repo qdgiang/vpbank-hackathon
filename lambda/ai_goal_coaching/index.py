@@ -195,7 +195,8 @@ def generate_financial_advice(analysis_results, knowledge_base_id, model_arn):
             retrievalQuery={'text': general_advice},
             retrievalConfiguration={
                 'vectorSearchConfiguration': {
-                    'numberOfResults': 10
+                    'numberOfResults': 10,
+                    'overrideSearchType': 'HYBRID'
                 }
             }
         )

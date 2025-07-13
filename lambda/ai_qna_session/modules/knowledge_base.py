@@ -21,7 +21,8 @@ def retrieve_financial_products(query: str, user_id: str) -> List[Dict[str, Any]
             retrievalQuery={'text': query},
             retrievalConfiguration={
                 'vectorSearchConfiguration': {
-                    'numberOfResults': 10
+                    'numberOfResults': 10,
+                    'overrideSearchType': 'HYBRID'
                 }
             }
         )
