@@ -52,3 +52,6 @@ sagemaker_pipeline/test/data
 **/temp_file_store
 
 **/__pycache__
+
+# bedrock
+financial_ai_finetuning

@@ -45,7 +45,7 @@ data "archive_file" "ai_qna_session_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../lambda/ai_qna_session"
   output_path = "${path.module}/../lambda/ai_qna_session/lambda.zip"
-  excludes    = ["requirements.txt", "layer/", ".env", "__pycache__/", "mock_local_db.py", "schema_saving_goals.json", "schema_user_jar_spending.json"]
+  excludes    = ["requirements.txt", "layer/", ".env", "__pycache__/", "mock_local_db.py"]
 }
 
 resource "aws_iam_role" "ai_qna_session_lambda_role" {
