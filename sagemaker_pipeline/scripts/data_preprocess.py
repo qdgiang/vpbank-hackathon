@@ -38,6 +38,7 @@ MODEL_S3_URI = "s3://test-vpb-hackathon/models/cc.vi.300.bin"
 SELECTED_COLS = ['transaction_id', 'user_id', 'amount', 'txn_time', 'msg_content',
                'merchant', 'to_account_name', 'tranx_type', 'category_label',
                'channel', 'location']
+FILTERED_COLS = ['tranx_type', 'category_label']
 SELECTED_CATEGORIES = ['NEC', 'FFA', 'PLAY', 'EDU', 'GIVE']
 SELECTED_TRANX_TYPES = ['transfer_out', 'qrcode_payment', 'atm_withdrawal']
 ID_COLS = ['transaction_id', 'user_id']
@@ -55,7 +56,7 @@ def filtered_transactions(df):
 
 
 def get_structured_features(df):
-    features = df[ID_COLS + STRUCTURED_COLS].copy()
+    features = df[ID_COLS + ['category_label'] + STRUCTURED_COLS].copy()
 
     # Handle amount
     features['amount_log'] = np.log1p(features['amount'])
@@ -66,13 +67,14 @@ def get_structured_features(df):
     # Handle txn_time
     features['txn_time'] = pd.to_datetime(df['txn_time'])
     features['hour'] = features['txn_time'].dt.hour
+    features['day_of_month'] = features['txn_time'].dt.day
     features['dayofweek'] = features['txn_time'].dt.dayofweek
     features['is_weekend'] = features['dayofweek'].isin([5, 6]).astype(int)
     features['hour_sin'] = np.sin(2 * np.pi * features['hour'] / 24)
     features['hour_cos'] = np.cos(2 * np.pi * features['hour'] / 24)
     features['dow_sin'] = np.sin(2 * np.pi * features['dayofweek'] / 7)
     features['dow_cos'] = np.cos(2 * np.pi * features['dayofweek'] / 7)
-    time_features = ['hour_sin', 'hour_cos', 'dow_sin', 'dow_cos', 'is_weekend']
+    time_features = ['txn_time', 'day_of_month', 'hour_sin', 'hour_cos', 'dow_sin', 'dow_cos', 'is_weekend']
 
     # Handle categorical features: tranx_type, channel, location
     ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
@@ -89,7 +91,7 @@ def get_structured_features(df):
 
     # Get final features dataframe
     selected_features = amount_features + time_features + oh_features + lb_features
-    features = features[ID_COLS + selected_features].copy()
+    features = features[ID_COLS + FILTERED_COLS + selected_features].copy()
     logger.info(f' ✔ Feature engineering: structured features - {features.shape}')
     return features
 
@@ -101,6 +103,10 @@ def get_text_embedding(df):
     model_path = get_model_path(MODEL_S3_URI)
     embedder = FastTextEmbedder(model_path)
     emb_df = embedder.embed_dataframe(df, text_cols=TEXT_COLS)
+    emb_df['transaction_id'] = df['transaction_id']
+    emb_df['user_id'] = df['user_id']
+    emb_df['tranx_type'] = df['tranx_type']
+    emb_df['category_label'] = df['category_label']
     logger.info(f' ✔ Feature engineering: text embedding features - {emb_df.shape}')
     return emb_df
 
@@ -123,12 +129,8 @@ def main():
     trans_df = pd.read_csv(src_path)
     logger.info(f' ✔ Loaded transactions - {trans_df.shape}')
 
-    src_path = os.path.join(args.input_dir, args.users_file)
-    users_df = pd.read_csv(src_path)
-    logger.info(f' ✔ Loaded users - {users_df.shape}')
-
     # Process data
-    trans_df = filtered_transactions(trans_df)
+    # trans_df = filtered_transactions(trans_df)
 
     # Get structured_df and save to file
     structured_df = get_structured_features(trans_df)

@@ -96,9 +96,7 @@ class FastTextEmbedder:
 
         embeddings = concat_series.apply(self.embed_sentence)
         matrix = np.vstack(embeddings.values)
-        transaction_ids = df.loc[concat_series.index, "transaction_id"].reset_index(drop=True)
         emb_df = pd.DataFrame(matrix)
-        emb_df.insert(0, "transaction_id", transaction_ids)
         return emb_df
 
     # ------------------------------------------------------------------

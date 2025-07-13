@@ -13,6 +13,12 @@ AWS_PROFILE = os.getenv("AWS_PROFILE")
 AWS_REGION = os.getenv("AWS_REGION")
 SAGEMAKER_ROLE = os.getenv("SAGEMAKER_ROLE")
 IMAGE_URI = os.getenv("IMAGE_URI")
+SAGEMAKER_INSTANCE = os.getenv("SAGEMAKER_JOB_INSTANCE")
+
+INPUT_LOCAL_DIR = "/opt/ml/processing/input/raw-data/"
+OUTPUT_LOCAL_DIR = "/opt/ml/processing/output/"
+INPUT_S3_URI = "s3://test-vpb-hackathon/raw/"
+OUTPUT_S3_URI = "s3://test-vpb-hackathon/preprocessed/"
 
 def main():
     # Create session
@@ -27,19 +33,15 @@ def main():
         image_uri=IMAGE_URI,
         command=["python3"],
         role=SAGEMAKER_ROLE,
-        instance_type='ml.m5.xlarge',
+        instance_type=SAGEMAKER_INSTANCE,
         instance_count=1,
+        base_job_name="data-preprocess",
         sagemaker_session=sagemaker_session
     )
 
     # Submit job
-    INPUT_LOCAL_DIR = "/opt/ml/processing/input/raw-data/"
-    OUTPUT_LOCAL_DIR = "/opt/ml/processing/output/"
-    INPUT_S3_URI = "s3://test-vpb-hackathon/raw/"
-    OUTPUT_S3_URI ="s3://test-vpb-hackathon/preprocessed/"
-
     processor.run(
-        code='etl_job/data_preprocess.py',
+        code='scripts/data_preprocess.py',
         inputs=[
             ProcessingInput(
                 source=INPUT_S3_URI,
