@@ -33,7 +33,10 @@ resource "aws_lambda_layer_version" "web_crawling_layer" {
 # Null resource to control lambda updates based on source file changes
 resource "null_resource" "web_crawling_lambda_source_hash" {
   triggers = {
-    source_code = filemd5("${path.module}/../lambda/web_crawling/index.py")
+    source_code_hash = md5(join("", [
+      for f in fileset("${path.module}/../lambda/web_crawling", "**/*.py") :
+      filemd5("${path.module}/../lambda/web_crawling/${f}")
+    ]))
   }
 }
 
@@ -62,6 +65,31 @@ resource "aws_iam_role" "web_crawling_lambda_role" {
   })
 }
 
+resource "aws_s3_bucket" "web_crawl_output" {
+  bucket = var.s3_crawl_bucket_name
+}
+
+resource "aws_iam_policy" "web_crawling_s3_policy" {
+  name        = "${var.project_name}-web-crawling-s3-policy"
+  description = "Policy to allow web crawling lambda to put objects in S3 bucket"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action   = "s3:PutObject",
+        Effect   = "Allow",
+        Resource = "${aws_s3_bucket.web_crawl_output.arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "web_crawling_s3_attachment" {
+  role       = aws_iam_role.web_crawling_lambda_role.name
+  policy_arn = aws_iam_policy.web_crawling_s3_policy.arn
+}
+
 resource "aws_iam_role_policy_attachment" "web_crawling_lambda_policy" {
   role       = aws_iam_role.web_crawling_lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -76,6 +104,13 @@ resource "aws_lambda_function" "web_crawling" {
   memory_size   = var.lambda_memory_size
 
   filename         = data.archive_file.web_crawling_zip.output_path
-  source_code_hash = null_resource.web_crawling_lambda_source_hash.triggers.source_code
+  source_code_hash = null_resource.web_crawling_lambda_source_hash.triggers.source_code_hash
   layers           = [aws_lambda_layer_version.web_crawling_layer.arn]
+
+  environment {
+    variables = {
+      S3_BUCKET   = aws_s3_bucket.web_crawl_output.bucket
+      AWS_REGION  = var.aws_region
+    }
+  }
 }

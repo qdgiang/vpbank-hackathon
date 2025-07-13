@@ -16,6 +16,12 @@ variable "aws_secret_access_key" {
   sensitive   = true
 }
 
+variable "s3_crawl_bucket_name" {
+  description = "The name of the S3 bucket to store web crawling results."
+  type        = string
+  default     = "vpb-finserv-web"
+}
+
 variable "project_name" {
   description = "Name of the project"
   type        = string

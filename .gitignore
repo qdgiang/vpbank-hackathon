@@ -23,8 +23,8 @@ terraform.tfstate.backup
 /coverage
 **test**
 **mock**
-**test**
-**mock**
+
+**/temp_file_store/**
 
 # production
 build
