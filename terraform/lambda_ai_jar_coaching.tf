@@ -30,6 +30,13 @@ resource "aws_lambda_layer_version" "ai_jar_coaching_layer" {
   source_code_hash    = data.archive_file.ai_jar_coaching_lambda_layer_zip.output_base64sha256
 }
 
+# Null resource to control lambda updates based on source file changes
+resource "null_resource" "ai_jar_coaching_lambda_source_hash" {
+  triggers = {
+    source_code = filemd5("${path.module}/../lambda/ai_jar_coaching/index.py")
+  }
+}
+
 # Lambda function code archive
 data "archive_file" "ai_jar_coaching_zip" {
   type        = "zip"
@@ -79,7 +86,7 @@ resource "aws_lambda_function" "ai_jar_coaching" {
   memory_size   = var.lambda_memory_size
 
   filename         = data.archive_file.ai_jar_coaching_zip.output_path
-  source_code_hash = data.archive_file.ai_jar_coaching_zip.output_base64sha256
+  source_code_hash = null_resource.ai_jar_coaching_lambda_source_hash.triggers.source_code
   layers           = [aws_lambda_layer_version.ai_jar_coaching_layer.arn]
 
   environment {

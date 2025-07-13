@@ -30,6 +30,13 @@ resource "aws_lambda_layer_version" "web_crawling_layer" {
   source_code_hash    = data.archive_file.web_crawling_lambda_layer_zip.output_base64sha256
 }
 
+# Null resource to control lambda updates based on source file changes
+resource "null_resource" "web_crawling_lambda_source_hash" {
+  triggers = {
+    source_code = filemd5("${path.module}/../lambda/web_crawling/index.py")
+  }
+}
+
 # Lambda function code archive
 data "archive_file" "web_crawling_zip" {
   type        = "zip"
@@ -69,6 +76,6 @@ resource "aws_lambda_function" "web_crawling" {
   memory_size   = var.lambda_memory_size
 
   filename         = data.archive_file.web_crawling_zip.output_path
-  source_code_hash = data.archive_file.web_crawling_zip.output_base64sha256
+  source_code_hash = null_resource.web_crawling_lambda_source_hash.triggers.source_code
   layers           = [aws_lambda_layer_version.web_crawling_layer.arn]
 }
