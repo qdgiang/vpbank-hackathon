@@ -6,7 +6,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime', region_name = os.environ.get("REGION_NAME", "ap-southeast-2"))
-KNOWLEDGE_BASE_ID = os.environ.get("KNOWLEDGE_BASE_ID", "MNWC7LRVAI")
+KNOWLEDGE_BASE_ID = os.environ.get("KNOWLEDGE_BASE_ID", "TARE1HFTXP")
 
 def retrieve_financial_products(query: str, user_id: str) -> List[Dict[str, Any]]:
     if not KNOWLEDGE_BASE_ID:

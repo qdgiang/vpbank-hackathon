@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 # Env var
-knowledge_base_id = os.environ.get("BEDROCK_KB_ID", "MNWC7LRVAI")
+knowledge_base_id = os.environ.get("BEDROCK_KB_ID", "TARE1HFTXP")
 model_arn = os.environ.get("BEDROCK_MODEL_ID", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
 
 # Initialize AWS clients
@@ -195,7 +195,7 @@ def generate_financial_advice(analysis_results, knowledge_base_id, model_arn):
             retrievalQuery={'text': general_advice},
             retrievalConfiguration={
                 'vectorSearchConfiguration': {
-                    'numberOfResults': 3
+                    'numberOfResults': 10
                 }
             }
         )
@@ -214,10 +214,11 @@ def generate_financial_advice(analysis_results, knowledge_base_id, model_arn):
             f"<product_info>\n{context_for_prompt}\n</product_info>\n\n"
             f"Now, create a final, actionable recommendation in Vietnamese. Follow these steps:\n"
             f"1. Briefly reiterate the key points from the initial advice.\n"
-            f"2. Naturally integrate specific products from the <product_info> that can help the user with their goals. For example, if they are behind on a savings goal, suggest a high-yield savings account or a short-term investment product.\n"
+            f"2. Naturally select and integrate specific (relevant only) products from the shortlisted <product_info> that can help the user with their goals. For example, if they are behind on a savings goal, suggest a high-yield savings account or a short-term investment product.\n"
             f"3. For each product you recommend, clearly explain WHY it is a good fit for their specific situation and goals mentioned in the <initial_advice>. Be professional, encouraging, and clear.\n"
-            f"4. Structure the final output cleanly. Use headings or bullet points if necessary."
-            f"\n\nAssistant:"
+            f"4. Structure the final output cleanly. Use headings or bullet points if necessary.\n"
+            f"5. For each recommended product, include its “Source URL for reference” (as provided in the retrieved chunks) formatted as a clickable link, and encourage the user to click it for more details.\n\n"
+            f"Assistant:"
         )
         final_advice = _invoke_llm(prompt_step2, model_arn)
         logger.info(f"Generated final advice: {final_advice}")

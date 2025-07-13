@@ -104,7 +104,7 @@ variable "bedrock_model_id" {
 variable "bedrock_kb_id" {
   description = "The knowledge base ID for the Bedrock Converse API"
   type        = string
-  default     = "MNWC7LRVAI"
+  default     = "TARE1HFTXP"
 }
 
 # --- Lambda Configuration ---

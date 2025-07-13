@@ -21,7 +21,7 @@ CONTEXT
 - You get a `user_id` and a `prompt`. All SQL must filter by `WHERE user_id = %s`.
 - Tools:
   • `query_user_jar_spending`, `query_saving_goals` (SQL on MySQL/MariaDB tables)  
-  • `retrieve_financial_products` (natural-language KB search; use at most once)
+  • `retrieve_financial_products` (natural-language KB search; returns chunks with fields `Title`, `Source URL for reference`, and section content; use at most once; only when recommending relevant products)
 - Only use tools when needed. For pure follow-ups on previous output, answer directly.
 
 WORKFLOW (single turn)
@@ -44,7 +44,9 @@ WORKFLOW (single turn)
    - For `retrieve_financial_products`, produce a concise NL query.
    - Niche: include `initial_target_date` when evaluating progress; compute current income as `SUM(virtual_budget_amount)`.
 3. **Execute**: Call all planned tools **together** in one batch—do not wait for one result before calling the next.
-4. **Answer**: Integrate all tool results into a single natural-language response in Vietnamese.
+4. **Answer**: 
+   - Integrate all tool results into a single natural-language response in Vietnamese.
+   - When including any product details from `retrieve_financial_products`, embed its “Source URL for reference” as a clickable link in the recommendation.
 
 DATABASE SCHEMAS
 
@@ -77,14 +79,14 @@ tool_config = {
         {
             "toolSpec": {
                 "name": "query_user_jar_spending",
-                "description": "Executes a SQL query against the 'user_jar_spending' table. Use this for questions about budgets, spending, and financial jars. Can also be used for JOIN queries with 'saving_goals'.",
+                "description": "Executes a MySQL query against the 'user_jar_spending' table. Use this for questions about budgets, spending, and financial jars. Can also be used for JOIN queries with 'saving_goals'.",
                 "inputSchema": {
                     "json": {
                         "type": "object",
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "A complete and valid SQL query to execute. The query must include a 'WHERE user_id = %s' clause."
+                                "description": "A complete and valid MySQL query to execute. The query must include a 'WHERE user_id = %s' clause."
                             }
                         },
                         "required": ["query"]
@@ -95,14 +97,14 @@ tool_config = {
         {
             "toolSpec": {
                 "name": "query_saving_goals",
-                "description": "Executes a SQL query against the 'saving_goals' table. Use this for questions about savings progress, goal targets, and deadlines. Can also be used for JOIN queries with 'user_jar_spending'.",
+                "description": "Executes a MySQL query against the 'saving_goals' table. Use this for questions about savings progress, goal targets, and deadlines. Can also be used for JOIN queries with 'user_jar_spending'.",
                 "inputSchema": {
                     "json": {
                         "type": "object",
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "A complete and valid SQL query to execute. The query must include a 'WHERE user_id = %s' clause."
+                                "description": "A complete and valid MySQL query to execute. The query must include a 'WHERE user_id = %s' clause."
                             }
                         },
                         "required": ["query"]
@@ -113,7 +115,7 @@ tool_config = {
         {
             "toolSpec": {
                 "name": "retrieve_financial_products",
-                "description": "Retrieves detailed information about financial products, services, or concepts from a knowledge base. Use this for general questions like 'What is a credit card?' or 'Tell me about savings accounts'.",
+                "description": "Retrieves relevant financial product information—Title, detailed sections, eligibility criteria and Source URL—from our knowledge base to support personalized, actionable recommendations. Use this when you need to suggest or explain bank-specific products to the user.",
                 "inputSchema": {
                     "json": {
                         "type": "object",
