@@ -194,10 +194,10 @@ const NotificationCenter = ({ transactions }) => {
 
   return (
     <>
-      <Card sx={{ borderRadius: 4, boxShadow: '0 2px 12px #0001', mb: 2 }}>
-        <CardContent>
-          <Box display="flex" alignItems="center" gap={1} mb={2}>
-            <Typography
+    <Card sx={{ borderRadius: 4, boxShadow: '0 2px 12px #0001', mb: 2 }}>
+      <CardContent>
+        <Box display="flex" alignItems="center" gap={1} mb={2}>
+          <Typography
               variant="h6"
               sx={{
                 background: '-webkit-linear-gradient(0,#e00200,#015aad,#00b74f)',
@@ -207,10 +207,10 @@ const NotificationCenter = ({ transactions }) => {
                 color: 'black',
                 fontWeight: 'bold'
               }}
-            >
-              Notification Center
-            </Typography>
-          </Box>
+          >
+            Notification Center
+          </Typography>
+        </Box>
           <Box display="flex" alignItems="center" gap={2} mb={2}>
             <Tabs value={tab} onChange={handleTabChange}>
               <Tab label="All" />
@@ -238,23 +238,23 @@ const NotificationCenter = ({ transactions }) => {
               <MenuItem value="security_alert">Security Alert</MenuItem>
             </Select>
           </Box>
-          <List>
+        <List>
             {top5.length === 0 && (
-              <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
                 There are no notifications.
-              </Typography>
-            )}
+            </Typography>
+          )}
             {top5.map((noti, idx) => (
               <NotificationItem key={noti.notification_id} noti={noti} transactions={transactions} onRead={handleRead} onDelete={handleDelete} />
-            ))}
-          </List>
+          ))}
+        </List>
           {filtered.length > 5 && (
             <Box textAlign="center" mt={2}>
               <Button variant="outlined" size="small" onClick={handleViewAllOpen}>View All</Button>
             </Box>
           )}
-        </CardContent>
-      </Card>
+      </CardContent>
+    </Card>
       <Dialog open={viewAllOpen} onClose={handleViewAllClose} maxWidth="xs" fullWidth>
         <DialogTitle>All Notifications</DialogTitle>
         <DialogContent ref={dialogContentRef} sx={{ maxHeight: 500, minHeight: 300 }}>

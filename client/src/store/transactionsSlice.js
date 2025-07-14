@@ -11,9 +11,9 @@ export const fetchTransactionsData = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await fetchTransactions();
-      return response.data;
+      return response.data.transactions;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
