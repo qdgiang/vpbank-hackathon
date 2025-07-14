@@ -102,3 +102,45 @@ output "db_connection_command" {
   description = "mysql command to connect to database via bastion"
   value       = "mysql -h ${aws_db_instance.mysql.endpoint} -u ${aws_db_instance.mysql.username} -p ${aws_db_instance.mysql.db_name}"
 }
+
+# Query Test API Gateway outputs
+output "query_test_api_gateway_id" {
+  description = "Query Test API Gateway ID"
+  value       = aws_api_gateway_rest_api.test_api.id
+}
+
+output "query_test_api_gateway_url" {
+  description = "Query Test API Gateway URL"
+  value       = "https://${aws_api_gateway_rest_api.test_api.id}.execute-api.${var.aws_region}.amazonaws.com/v1/test"
+}
+
+# SQS and API Gateway outputs
+output "transactions_queue_url" {
+  description = "SQS FIFO Queue URL"
+  value       = aws_sqs_queue.transactions_fifo.url
+}
+
+output "transactions_queue_arn" {
+  description = "SQS FIFO Queue ARN"
+  value       = aws_sqs_queue.transactions_fifo.arn
+}
+
+output "transactions_api_url" {
+  description = "API Gateway URL for transactions queue"
+  value       = "https://${aws_api_gateway_rest_api.test_api.id}.execute-api.${var.aws_region}.amazonaws.com/v1/transactions_queue"
+}
+
+output "sqs_processor_lambda_name" {
+  description = "SQS Processor Lambda function name"
+  value       = aws_lambda_function.sqs_processor.function_name
+}
+
+output "sqs_processor_lambda_arn" {
+  description = "SQS Processor Lambda function ARN"
+  value       = aws_lambda_function.sqs_processor.arn
+}
+
+output "query_test_api_gateway_name" {
+  description = "Query Test API Gateway name"
+  value       = aws_api_gateway_rest_api.test_api.name
+}

@@ -9,7 +9,7 @@ CREATE TABLE notifications
     title             VARCHAR(255)                                NOT NULL,
     message           TEXT                                        NOT NULL,
     severity          VARCHAR(20)              DEFAULT 'info'     NOT NULL,
-    status            INTEGER                  DEFAULT 0,
+    status            TINYINT                  DEFAULT 0,
     created_at        TIMESTAMP                DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_notifications_user 
         FOREIGN KEY (user_id) REFERENCES users(user_id)

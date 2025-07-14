@@ -1,0 +1,16 @@
+{
+  "table": "user_jar_spending",
+  "description": "Stores the user's budget allocation and spending in different categories (jars).",
+  "columns": {
+    "user_id":       "UUID – The user's unique identifier, used to join with the saving_goals table.",
+    "jar_code":      "VARCHAR(10) – The code for the budget jar. Valid values: NEC (Necessities), FFA (Financial Freedom), EDU (Education), LTSS (Long Term Savings), PLY (Play), GIV (Give/Charity).",
+    "virtual_budget_amount": "NUMERIC(15,2) – The total budget allocated to the jar.",
+    "spent_amount":  "NUMERIC(15,2) – The amount spent from the jar.",
+    "remaining_budget": "NUMERIC(15,2) – The remaining budget in the jar (virtual_budget_amount - spent_amount).",
+    "last_income_allocation": "TIMESTAMP WITH TIME ZONE – The last time money was added to the jar.",
+    "last_spending_date":     "TIMESTAMP WITH TIME ZONE – The last time money was spent from the jar.",
+    "created_at":    "TIMESTAMP WITH TIME ZONE – The date the record was created.",
+    "updated_at":    "TIMESTAMP WITH TIME ZONE – The date the record was last updated."
+  },
+  "primary_key": ["user_id", "jar_code"]
+}
