@@ -35,7 +35,7 @@ resource "aws_db_instance" "mysql" {
   identifier = "${var.project_name}-mysql-private"
 
   engine         = "mysql"
-  engine_version = "8.0.35"
+  engine_version = "8.0.40"
   instance_class = var.db_instance_class
 
   allocated_storage     = var.db_allocated_storage
