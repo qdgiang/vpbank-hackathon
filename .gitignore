@@ -54,4 +54,4 @@ sagemaker_pipeline/test/data
 **/__pycache__
 
 # bedrock
-financial_ai_finetuning
+# financial_ai_finetuning

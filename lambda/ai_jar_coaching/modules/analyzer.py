@@ -28,11 +28,11 @@ def analyze_jars(jars: list):
 
         # Trigger logic for encouragement jars (spend more)
         if jar['jar_code'] in ['EDU', 'GIV']:
-            if actual_daily_spending > ideal_daily_spending:
+            if actual_daily_spending > ideal_daily_spending * 1.2:
                 jar['triggered'] = True
         # Trigger logic for regular jars (spend less)
         else:
-            if actual_daily_spending < ideal_daily_spending:
+            if actual_daily_spending < ideal_daily_spending * 1.2:
                 jar['triggered'] = True
         
         if jar['triggered']:
