@@ -1,0 +1,10 @@
+2025-07-14 23:55:09 - INFO - Loading cached SSO token for test_sess
+2025-07-14 23:55:12 - INFO - Error creating customization job: An error occurred (ValidationException) when calling the CreateModelCustomizationJob operation: 1 validation error detected: Value 'arn:aws:bedrock:us-west-2:055029294644:inference-profile/us.meta.llama3-1-8b-instruct-v1:0' at 'baseModelIdentifier' failed to satisfy constraint: Member must satisfy regular expression pattern: (arn:aws(-[^:]+)?:bedrock:[a-z0-9-]{1,20}:(([0-9]{12}:custom-model/([a-z0-9-]{1,63}[.]{1}[a-z0-9-]{1,63}([.]?[a-z0-9-]{1,63})([:][a-z0-9-]{1,63}){0,2})/[a-z0-9]{12})|(:foundation-model/[a-z0-9-]{1,63}[.]{1}[a-z0-9-]{1,63}([:][a-z0-9-]{1,63}){0,2})))|([a-z0-9-]{1,63}[.]{1}[a-z0-9-]{1,63}([.]?[a-z0-9-]{1,63})([:][a-z0-9-]{1,63}){0,2})|(([0-9a-zA-Z][_-]?)+)
+2025-07-14 23:56:36 - INFO - Loading cached SSO token for test_sess
+2025-07-14 23:56:39 - INFO - Error creating customization job: An error occurred (ValidationException) when calling the CreateModelCustomizationJob operation: The provided model identifier is invalid.
+2025-07-15 00:03:49 - INFO - Loading cached SSO token for test_sess
+2025-07-15 00:03:52 - INFO - Error creating customization job: An error occurred (ValidationException) when calling the CreateModelCustomizationJob operation: The provided model identifier is invalid.
+2025-07-15 00:10:09 - INFO - Loading cached SSO token for test_sess
+2025-07-15 00:10:11 - INFO - Error creating customization job: An error occurred (ValidationException) when calling the CreateModelCustomizationJob operation: Could not assume provided IAM role.
+2025-07-15 00:16:51 - INFO - Loading cached SSO token for test_sess
+2025-07-15 00:16:53 - INFO - Error creating customization job: An error occurred (ValidationException) when calling the CreateModelCustomizationJob operation: Could not assume provided IAM role.
