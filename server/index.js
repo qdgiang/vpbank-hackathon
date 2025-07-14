@@ -13,6 +13,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
 app.use('/api/v1', v1Router);
 
 // Error handling middleware
