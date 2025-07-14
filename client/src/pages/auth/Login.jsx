@@ -101,9 +101,7 @@ const Login = () => {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
             <Box sx={{ textAlign: 'center' }}>
-              <Link component={RouterLink} to="/register" variant="body2">
-                {"Don't have an account? Sign Up"}
-              </Link>
+              
             </Box>
           </Box>
         </Paper>

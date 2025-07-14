@@ -1,14 +1,13 @@
-const baseURL = '/api';
+const baseURL = '/api/v1';
 
 const apiConfig = {
   baseURL,
-  users: `${baseURL}/users`,
-  transactions: `${baseURL}/transactions`,
-  notifications: `${baseURL}/notifications`,
-  goals: `${baseURL}/goals`,
-  jars: `${baseURL}/jars`,
-  login: `${baseURL}/auth/login`,
-  register: `${baseURL}/auth/register`,
+  users: '/user',
+  transactions: '/transaction',
+  notifications: '/notification',
+  goals: '/goal',
+  jars: '/jar',
+  login: '/auth/login',
 };
 
 export default apiConfig; 
