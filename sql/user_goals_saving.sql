@@ -1,4 +1,4 @@
-CREATE TABLE goal_setting
+CREATE TABLE saving_goals
 (
     goal_id        CHAR(36)                 DEFAULT (UUID()) NOT NULL
         PRIMARY KEY,
