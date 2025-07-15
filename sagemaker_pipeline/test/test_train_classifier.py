@@ -13,6 +13,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sagemaker.feature_store.feature_group import FeatureGroup
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import confusion_matrix, classification_report
 
 
@@ -20,36 +21,25 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# ------------- CONFIG -----------------
-TRAIN_DIR = "/opt/ml/input/data/train"
-MODEL_DIR = "/opt/ml/model"
-OUTPUT_DIR = "/opt/ml/output"
-
-INPUT_STRUCT_PATH = os.path.join(TRAIN_DIR, "structured_features.csv")
-INPUT_TEXT_PATH = os.path.join(TRAIN_DIR, "text_features.csv")
-
+# -------------- CONFIG -----------------
+INPUT_STRUCT_PATH = 'test/data/structured_features.csv'
+INPUT_TEXT_PATH = 'test/data/text_features.csv'
 EMBED_DIM = 64
+BATCH_SIZE = 25
 
-# -------- PROCESSING FUNCTIONS --------
-def parse_args():
-    parser = argparse.ArgumentParser()
+FG_NAME = 'user-embeddings'
+MODEL_DIR = 'test/data'
+fs_runtime = boto3.client(
+        "sagemaker-featurestore-runtime",
+        region_name='ap-southeast-2'
+)
 
-    # Các hparams tùy chỉnh
-    parser.add_argument("--epochs",         type=int,   default=30)
-    parser.add_argument("--emb-batch-size", type=int,   default=25)
+TRAINING_BATCH_SIZE = 512
+EPOCHS = 10 # 30
+HIDDEN_UNITS = 128
 
-    parser.add_argument("--training-batch-size", type=int, default=512)
-    parser.add_argument("--hidden-units",        type=int, default=128)
-
-    parser.add_argument("--feature-group-name",  type=str, default="user-embeddings")
-
-    parser.add_argument("--bucket", type=str, default="test-vpb-hackathon")
-    parser.add_argument("--model_dir", type=str,
-                        default=os.environ.get("SM_MODEL_DIR", "/opt/ml/model"))
-    return parser.parse_args()
-
-
-def fetch_all_embeddings(unique_ids, max_workers=8, args=None):
+# --------- PROCESSING FUNCTIONS --------
+def fetch_all_embeddings(unique_ids, max_workers=8):
     """
     Fetch embeddings for all unique_ids using ThreadPoolExecutor.
     Returns dict {user_id: vector}.
@@ -73,7 +63,7 @@ def fetch_all_embeddings(unique_ids, max_workers=8, args=None):
         Returns {user_id: np.ndarray}.
         """
         records = {
-            "FeatureGroupName": args.feature_group_name,
+            "FeatureGroupName": FG_NAME,
             "RecordIdentifiersValueAsString": user_ids,
             "FeatureNames": ["embedding"]
         }
@@ -97,20 +87,20 @@ def fetch_all_embeddings(unique_ids, max_workers=8, args=None):
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
         futures = {
             ex.submit(batch_fetch_embeddings, chunk): chunk
-            for chunk in chunker(unique_ids, args.emb_batch_size)
+            for chunk in chunker(unique_ids, BATCH_SIZE)
         }
 
         for i, fut in enumerate(as_completed(futures), 1):
             uid_to_emb.update(fut.result())
             if i % 100 == 0 or i == len(futures):
                 logger.info(f"  • Done {i}/{len(futures)} batches "
-                            f"({i * args.emb_batch_size}/{total} users)")
+                            f"({i * BATCH_SIZE}/{total} users)")
 
     logger.info("✅ All embeddings fetched.")
     return uid_to_emb
 
 
-def preprocess_data(args):
+def preprocess_data():
     """
     Assemble the full training set by merging structured features, text‑field
     embeddings, and user‑level embeddings.
@@ -138,8 +128,9 @@ def preprocess_data(args):
 
     # Merge with user_emb
     unique_uids = df["user_id"].unique()
-    uid_to_vec = fetch_all_embeddings(unique_uids, max_workers=8, args=args)
+    uid_to_vec = fetch_all_embeddings(unique_uids)
     user_embeddings = np.vstack(df["user_id"].map(uid_to_vec).to_list())
+    #user_embeddings = np.vstack(df["user_id"].apply(fetch_user_emb).to_list())
 
     # Get X and y
     X = np.hstack([
@@ -221,47 +212,28 @@ def save_artifacts(model: tf.keras.Model,
     """
     Persist the TensorFlow SavedModel and evaluation.json side‑by‑side.
     """
-    # Save model in container
     model.save(os.path.join(MODEL_DIR, "tf_model"))
-    logger.info(f"✅ Model and metrics saved to {MODEL_DIR}")
 
-    # Save metrics in container
     eval_dict = {
         "val_accuracy": float(history.history["val_accuracy"][-1]),
         "val_loss": float(history.history["val_loss"][-1]),
         **test_metrics,
     }
-    with open(os.path.join(OUTPUT_DIR, "evaluation.json"), "w") as f:
+    with open(os.path.join(MODEL_DIR, "tf_model/evaluation.json"), "w") as f:
         json.dump(eval_dict, f, indent=2)
-    logger.info(f"✅ Metrics saved to {OUTPUT_DIR}")
 
-    # Upload metrics to S3
-    bucket = args.bucket
-    key = f"classifier_output/{os.environ['TRAINING_JOB_NAME']}/output/metadata/evaluation.json"
-    s3 = boto3.client("s3")
-    s3.upload_file(os.path.join(OUTPUT_DIR, "evaluation.json"), bucket, key)
-    logger.info(f"✅ Uploaded metrics to s3://{bucket}/{key}")
+    logger.info(f"✅ Model and metrics saved to {MODEL_DIR}")
+
 
 if __name__ == '__main__':
-    # Parse arguments
-    args = parse_args()
     # Prepare data
-    global fs_runtime
-    fs_runtime = boto3.client(
-        "sagemaker-featurestore-runtime",
-        region_name='ap-southeast-2'
-    )
-    X,y, num_classes = preprocess_data(args)
+    X, y, num_classes = preprocess_data()
 
-    label2id = {
-        'NEC': 0,
-        'FFA': 1,
-        'PLAY': 2,
-        'EDU': 3,
-        'GIVE': 4,
-        'LTSS': 5
-    }
-    y = np.vectorize(label2id.get)(y)
+    le = LabelEncoder()
+    y = le.fit_transform(y)
+    logger.info('✅ Label Encoder:')
+    for index, label in enumerate(le.classes_):
+        logger.info(f'Index: {index}, Label: {label}')
 
     X_train, X_temp, y_train, y_temp = train_test_split(
         X, y, test_size=0.30, random_state=42, stratify=y
@@ -274,15 +246,14 @@ if __name__ == '__main__':
     # Build and train model MLP+Softmax
     model = build_mlp(input_dim=X_train.shape[1],
                       num_classes=num_classes,
-                      hidden_units=args.hidden_units)
+                      hidden_units=HIDDEN_UNITS)
 
     history = train_model(model,
                           X_train, y_train,
                           X_val, y_val,
-                          epochs=args.epochs,
-                          batch_size=args.training_batch_size)
+                          epochs=EPOCHS,
+                          batch_size=TRAINING_BATCH_SIZE)
 
-    # Evaluate & Save output
+    # Evaluate and save model output
     test_metrics = evaluate_model(model, X_test, y_test)
     save_artifacts(model, history, test_metrics)
-

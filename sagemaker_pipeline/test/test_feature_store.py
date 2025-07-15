@@ -1,3 +1,3 @@
 from sagemaker.feature_store.feature_group import FeatureGroup
 fg = FeatureGroup("user-embeddings")
-print(fg.get_record("2fc65740-da6d-43f4-b368-d7e50d952534"))
+print(fg.get_record("ff331ffe-d095-4e9c-9ca1-32b5259cf9ac"))
