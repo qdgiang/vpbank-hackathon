@@ -55,3 +55,4 @@ sagemaker_pipeline/test/data
 
 # bedrock
 # financial_ai_finetuning
+financial_ai_finetuning/model_listing.ipynb
