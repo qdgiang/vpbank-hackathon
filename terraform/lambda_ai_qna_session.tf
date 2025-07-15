@@ -33,7 +33,10 @@ resource "aws_lambda_layer_version" "ai_qna_session_layer" {
 # Null resource to control lambda updates based on source file changes
 resource "null_resource" "ai_qna_session_lambda_source_hash" {
   triggers = {
-    source_code = filemd5("${path.module}/../lambda/ai_qna_session/index.py")
+    source_code_hash = md5(join("", [
+      for f in fileset("${path.module}/../lambda/ai_qna_session", "**/*.py") :
+      filemd5("${path.module}/../lambda/ai_qna_session/${f}")
+    ]))
   }
 }
 
@@ -42,7 +45,7 @@ data "archive_file" "ai_qna_session_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../lambda/ai_qna_session"
   output_path = "${path.module}/../lambda/ai_qna_session/lambda.zip"
-  excludes    = ["requirements.txt", "layer/", ".env", "__pycache__/", "mock_local_db.py", "schema_saving_goals.json", "schema_user_jar_spending.json"]
+  excludes    = ["requirements.txt", "layer/", ".env", "__pycache__/", "mock_local_db.py"]
 }
 
 resource "aws_iam_role" "ai_qna_session_lambda_role" {
@@ -86,7 +89,7 @@ resource "aws_lambda_function" "ai_qna_session" {
   memory_size   = var.lambda_memory_size
 
   filename         = data.archive_file.ai_qna_session_zip.output_path
-  source_code_hash = null_resource.ai_qna_session_lambda_source_hash.triggers.source_code
+  source_code_hash = null_resource.ai_qna_session_lambda_source_hash.triggers.source_code_hash
   layers           = [aws_lambda_layer_version.ai_qna_session_layer.arn]
 
   environment {

@@ -2,8 +2,7 @@ import boto3
 import os
 import logging
 from typing import List, Dict, Any
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime', region_name = os.environ.get("REGION_NAME", "ap-southeast-2"))
 KNOWLEDGE_BASE_ID = os.environ.get("KNOWLEDGE_BASE_ID", "TARE1HFTXP")
@@ -21,7 +20,8 @@ def retrieve_financial_products(query: str, user_id: str) -> List[Dict[str, Any]
             retrievalQuery={'text': query},
             retrievalConfiguration={
                 'vectorSearchConfiguration': {
-                    'numberOfResults': 10
+                    'numberOfResults': 10,
+                    'overrideSearchType': 'HYBRID'
                 }
             }
         )

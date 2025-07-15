@@ -68,7 +68,9 @@ def analyze_goals(goals):
     today = datetime.now(tz=VN_tz).date()
 
     def months_between(d1: date, d2: date):
-        return (d1.year - d2.year) * 12 + d1.month - d2.month
+        days = (d1 - d2).days
+        approx_month = round(days/30, 2)
+        return approx_month
 
     for goal in goals:
         try:
@@ -195,7 +197,8 @@ def generate_financial_advice(analysis_results, knowledge_base_id, model_arn):
             retrievalQuery={'text': general_advice},
             retrievalConfiguration={
                 'vectorSearchConfiguration': {
-                    'numberOfResults': 10
+                    'numberOfResults': 10,
+                    'overrideSearchType': 'HYBRID'
                 }
             }
         )
