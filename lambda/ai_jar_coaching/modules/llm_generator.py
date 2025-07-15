@@ -3,15 +3,33 @@ import json
 import boto3
 import logging
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
+import random
+import time
+from botocore.exceptions import ClientError
+
+MAX_RETRIES = 4
+BACKOFF_BASE_SEC = 0.5
 
 bedrock_runtime_client = boto3.client(
     service_name='bedrock-runtime', 
     region_name=os.environ.get("AWS_REGION", "ap-southeast-2")
 )
 
-MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
+# Main bedrock model: finetune-jar-coach-v3 (base llama3-2-3b-instruct-v1)
+MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0") # fallback to serverless model if finetuned model is not available
+
+def bedrock_with_retry(client, **kwargs) -> dict:
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return client.converse(**kwargs)
+        except ClientError as e:
+            if attempt == MAX_RETRIES:
+                logger.error("Max retries reached → %s", e)
+                raise
+            backoff = BACKOFF_BASE_SEC * (2 ** (attempt - 1)) * random.uniform(0.8, 1.2)
+            logger.warning("Throttled (%s). Retrying in %.2fs …", e.response["Error"]["Code"], backoff)
+            time.sleep(backoff)
 
 def generate_coaching_advice(triggered_jars: list):
     if not triggered_jars:
@@ -71,25 +89,36 @@ Assistant:
 """
 
     try:
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 4096,
-            "temperature": 0.8,
-            "messages": [{
-                "role": "user",
-                "content": [{ "type": "text", "text": prompt }]
-            }]
-        })
+        # body = json.dumps({
+        #     "anthropic_version": "bedrock-2023-05-31",
+        #     "max_tokens": 4096,
+        #     "temperature": 0.8,
+        #     "messages": [{
+        #         "role": "user",
+        #         "content": [{ "type": "text", "text": prompt }]
+        #     }]
+        # })
 
-        response = bedrock_runtime_client.invoke_model(
-            body=body,
+        # response = bedrock_runtime_client.invoke_model(
+        #     body=body,
+        #     modelId=MODEL_ID,
+        # )
+        # response_body = json.loads(response.get('body').read())
+        # raw_completion = response_body['content'][0]['text']
+        
+        # cleaned_json_str = raw_completion.strip().replace('```json', '').replace('```', '').strip()
+        
+        response = bedrock_with_retry(
+            bedrock_runtime_client,
             modelId=MODEL_ID,
+            system = [{"text": "Bạn là một trợ lý tài chính AI vui tính, nhí nhảnh và thông minh."}],
+            messages = [{
+                "role": "user",
+                "content": [{"text": prompt}]
+            }]
         )
-        response_body = json.loads(response.get('body').read())
-        raw_completion = response_body['content'][0]['text']
-        
+        raw_completion = response["output"]["message"]["content"][0]["text"].strip()
         cleaned_json_str = raw_completion.strip().replace('```json', '').replace('```', '').strip()
-        
         try:
             suggestions = json.loads(cleaned_json_str)
             return suggestions

@@ -33,7 +33,10 @@ resource "aws_lambda_layer_version" "ai_goal_coaching_layer" {
 # Null resource to control lambda updates based on source file changes
 resource "null_resource" "ai_goal_coaching_lambda_source_hash" {
   triggers = {
-    source_code = filemd5("${path.module}/../lambda/ai_goal_coaching/index.py")
+    source_code_hash = md5(join("", [
+      for f in fileset("${path.module}/../lambda/ai_goal_coaching", "**/*.py") :
+      filemd5("${path.module}/../lambda/ai_goal_coaching/${f}")
+    ]))
   }
 }
 
@@ -86,7 +89,7 @@ resource "aws_lambda_function" "ai_goal_coaching" {
   memory_size   = var.lambda_memory_size
 
   filename         = data.archive_file.ai_goal_coaching_zip.output_path
-  source_code_hash = null_resource.ai_goal_coaching_lambda_source_hash.triggers.source_code
+  source_code_hash = null_resource.ai_goal_coaching_lambda_source_hash.triggers.source_code_hash
   layers           = [aws_lambda_layer_version.ai_goal_coaching_layer.arn]
 
   environment {
