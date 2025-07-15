@@ -17,7 +17,8 @@ bedrock_runtime_client = boto3.client(
     region_name=os.environ.get("AWS_REGION", "ap-southeast-2")
 )
 
-MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0")
+# Main bedrock model: finetune-jar-coach-v3 (base llama3-2-3b-instruct-v1)
+MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "arn:aws:bedrock:ap-southeast-2:055029294644:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0") # fallback to serverless model if finetuned model is not available
 
 def bedrock_with_retry(client, **kwargs) -> dict:
     for attempt in range(1, MAX_RETRIES + 1):

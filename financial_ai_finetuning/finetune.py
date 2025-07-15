@@ -12,7 +12,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
-                    handlers=[logging.StreamHandler(), logging.FileHandler("./logs/finetune.log", mode='a', encoding='utf-8')])
+                    handlers=[logging.StreamHandler(), logging.FileHandler("./logs/finetune.log", mode='w', encoding='utf-8')])
 logger = logging.getLogger(__name__)
 
 REGION = os.getenv("AWS_REGION", "us-west-2")
@@ -22,12 +22,12 @@ S3_TRAINING_URI = os.getenv("S3_TRAINING_URI", "")
 S3_OUTPUT_URI = os.getenv("S3_OUTPUT_URI", "")
 
 # Generate unique names
-job_name = f"finetune-job-coaching"
-custom_model_name = f"finetune-jar-coach"
+job_name = f"finetune-job-coaching-v3"
+custom_model_name = f"finetune-jar-coach-v3"
 
 # Hyperparameters
 hyperparams = {
-    "epochCount": "8",
+    "epochCount": "10",
     "batchSize": "1",
     "learningRate": "0.0001"
 }

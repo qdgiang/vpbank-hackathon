@@ -7,7 +7,7 @@ load_dotenv()
 
 BUCKET = os.getenv("BUCKET", "vpb-bedrock-finetune")
 PREFIX = os.getenv("PREFIX", "vpbank-hackathon/jar_coaching_dataset")
-LOCAL_PATH = os.getenv("LOCAL_PATH", "jar_coaching_dataset.jsonl")
+LOCAL_PATH = os.getenv("LOCAL_PATH", "jar_coaching_dataset_convo.jsonl")
 REGION = os.getenv("AWS_REGION", "us-west-2")
 
 logging.basicConfig(level=logging.INFO,
