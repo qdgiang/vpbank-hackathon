@@ -79,7 +79,7 @@ tool_config = {
         {
             "toolSpec": {
                 "name": "query_user_jar_spending",
-                "description": "Executes a MySQL query against the 'user_jar_spending' table. Use this for questions about monthly personal spending summary. Can also be used for JOIN queries with 'saving_goals'.",
+                "description": "Executes a MySQL query against the 'user_jar_spending' table. Use this for questions about current **monthly** personal spending summary. Can also be used for JOIN queries with 'saving_goals'.",
                 "inputSchema": {
                     "json": {
                         "type": "object",
