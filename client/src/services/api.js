@@ -24,7 +24,7 @@ export const updateUser = async (id, data) => api.put(`${apiConfig.users}/${id}`
 export const deleteUser = async (id) => api.delete(`${apiConfig.users}/${id}`);
 
 // Transactions
-export const fetchTransactions = async () => api.get(apiConfig.transactions);
+export const fetchTransactions = async () => api.post(`${apiConfig.transactions}/search`);
 export const fetchTransaction = async (id) => api.get(`${apiConfig.transactions}/${id}`);
 export const createTransaction = async (data) => api.post(apiConfig.transactions, data);
 export const updateTransaction = async (id, data) => api.put(`${apiConfig.transactions}/${id}`, data);
@@ -53,6 +53,5 @@ export const deleteJar = async (id) => api.delete(`${apiConfig.jars}/${id}`);
 
 // Auth
 export const loginUser = async (credentials) => api.post(apiConfig.login, credentials);
-export const registerUser = async (data) => api.post(apiConfig.register, data);
 
 export default api; 

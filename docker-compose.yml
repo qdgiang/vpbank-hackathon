@@ -1,0 +1,34 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: server/dev.Dockerfile
+    container_name: backend
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./server/.env
+    restart: unless-stopped
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: client/dev.Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./client/.env
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=development 

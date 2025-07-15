@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
   }
   
   backend "s3" {
@@ -26,6 +30,15 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+# DHCP Options Set
+resource "aws_vpc_dhcp_options" "main" {
+  domain_name_servers = ["AmazonProvidedDNS"]
+  
+  tags = {
+    Name = "${var.project_name}-dhcp-options"
+  }
+}
+
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
@@ -34,6 +47,12 @@ resource "aws_vpc" "main" {
   tags = {
     Name = "${var.project_name}-vpc"
   }
+}
+
+# Associate DHCP Options with VPC
+resource "aws_vpc_dhcp_options_association" "main" {
+  vpc_id          = aws_vpc.main.id
+  dhcp_options_id = aws_vpc_dhcp_options.main.id
 }
 
 resource "aws_subnet" "private" {

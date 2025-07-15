@@ -34,11 +34,11 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
     return transactions.filter(tx => {
       const matchText =
         filterText === '' ||
-        tx.description.toLowerCase().includes(filterText.toLowerCase());
+        (tx.msg_content || '').toLowerCase().includes(filterText.toLowerCase());
       const matchFrom =
-        !filterFrom || dayjs(tx.date).isSameOrAfter(dayjs(filterFrom), 'day');
+        !filterFrom || dayjs(tx.txn_time).isSameOrAfter(dayjs(filterFrom), 'day');
       const matchTo =
-        !filterTo || dayjs(tx.date).isSameOrBefore(dayjs(filterTo), 'day');
+        !filterTo || dayjs(tx.txn_time).isSameOrBefore(dayjs(filterTo), 'day');
       return matchText && matchFrom && matchTo;
     });
   }, [transactions, filterText, filterFrom, filterTo]);
@@ -83,6 +83,42 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
   };
   const handleDeleteTransaction = (id) => {
     dispatch(deleteTransactionData(id));
+  };
+
+  // Các loại là thu (+)
+  const IN_TYPES = [
+    'transfer_in',
+    'cashback',
+    'refund',
+    'opensaving',
+    'opendeposit',
+    'openaccumulation'
+  ];
+  // Các loại là chi (-)
+  const OUT_TYPES = [
+    'transfer_out',
+    'qrcode_payment',
+    'atm_withdrawal',
+    'service_fee',
+    'loan_repayment',
+    'stock',
+    'bill_payment',
+    'mobile_topup'
+  ];
+  function getTransactionSign(tranx_type) {
+    if (IN_TYPES.includes(tranx_type)) return 1;
+    if (OUT_TYPES.includes(tranx_type)) return -1;
+    return 0;
+  }
+
+  // Map code category_label sang tên đầy đủ
+  const CATEGORY_MAP = {
+    'NEC': 'Necessities',
+    'FFA': 'Financial Freedom',
+    'EDU': 'Education',
+    'LTSS': 'Long-term Savings',
+    'PLY': 'Play',
+    'GIV': 'Give'
   };
 
   return (
@@ -136,28 +172,34 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
                 <TableCell>Date</TableCell>
                 <TableCell>Description</TableCell>
                 <TableCell align="right">Amount</TableCell>
-                <TableCell>Jar</TableCell>
+                <TableCell>Jar Type</TableCell>
+                <TableCell>Recipient/Sender</TableCell>
+                <TableCell>Location</TableCell>
+                {/* <TableCell>Channel</TableCell> */}
+                {/* <TableCell>Transaction Type</TableCell> */}
+                <TableCell>Note</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {paged.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center">No transactions found.</TableCell>
+                  <TableCell colSpan={9} align="center">No transactions found.</TableCell>
                 </TableRow>
               ) : (
                 paged.map((tx, idx) => {
                   const globalIdx = (page - 1) * rowsPerPage + idx;
                   return (
                     <TableRow key={globalIdx} hover>
-                      <TableCell>{dayjs(tx.date).format('YYYY-MM-DD')}</TableCell>
-                      <TableCell>{tx.description}</TableCell>
-                      <TableCell align="right" style={{ color: tx.amount > 0 ? '#388e3c' : '#d32f2f', fontWeight: 'bold' }}>
-                        {tx.amount > 0 ? '+' : '-'}{Math.abs(tx.amount).toLocaleString('vi-VN')}
+                      <TableCell>{dayjs(tx.txn_time).format('YYYY-MM-DD')}</TableCell>
+                      <TableCell>{tx.msg_content}</TableCell>
+                      <TableCell align="right" style={{ color: getTransactionSign(tx.tranx_type) > 0 ? '#388e3c' : '#d32f2f', fontWeight: 'bold' }}>
+                        {getTransactionSign(tx.tranx_type) > 0 ? '+' : '-'}
+                        {Math.abs(Number(tx.amount)).toLocaleString('vi-VN')}
                       </TableCell>
                       <TableCell>
                         <FormControl size="small" fullWidth>
                           <Select
-                            value={editedJars[globalIdx] || tx.jar || classifyTransaction(tx)}
+                            value={editedJars[globalIdx] || tx.category_label || classifyTransaction(tx)}
                             onChange={e => handleJarChange(globalIdx, e.target.value)}
                           >
                             {jarList.map(jar => (
@@ -166,6 +208,11 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
                           </Select>
                         </FormControl>
                       </TableCell>
+                      <TableCell>{tx.to_account_name}</TableCell>
+                      <TableCell>{tx.location}</TableCell>
+                      {/* <TableCell>{tx.channel}</TableCell> */}
+                      {/* <TableCell>{tx.tranx_type}</TableCell> */}
+                      <TableCell>{tx.merchant}</TableCell>
                     </TableRow>
                   );
                 })

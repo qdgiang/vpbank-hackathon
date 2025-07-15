@@ -39,48 +39,48 @@ output "rds_security_group_id" {
   value       = aws_security_group.rds.id
 }
 
-# Query Test Lambda outputs
-output "query_test_lambda_name" {
-  description = "Query Test Lambda function name"
-  value       = aws_lambda_function.query_test.function_name
+# CRUD Test Lambda outputs
+output "crud_test_lambda_name" {
+  description = "CRUD Test Lambda function name"
+  value       = aws_lambda_function.crud_test.function_name
 }
 
-output "query_test_lambda_arn" {
-  description = "Query Test Lambda function ARN"
-  value       = aws_lambda_function.query_test.arn
+output "crud_test_lambda_arn" {
+  description = "CRUD Test Lambda function ARN"
+  value       = aws_lambda_function.crud_test.arn
 }
 
-# Query Transaction Lambda outputs
-output "query_transaction_lambda_name" {
-  description = "Query Transaction Lambda function name"
-  value       = aws_lambda_function.query_transaction.function_name
+# CRUD Transaction Lambda outputs
+output "crud_transaction_lambda_name" {
+  description = "CRUD Transaction Lambda function name"
+  value       = aws_lambda_function.crud_transaction.function_name
 }
 
-output "query_transaction_lambda_arn" {
-  description = "Query Transaction Lambda function ARN"
-  value       = aws_lambda_function.query_transaction.arn
+output "crud_transaction_lambda_arn" {
+  description = "CRUD Transaction Lambda function ARN"
+  value       = aws_lambda_function.crud_transaction.arn
 }
 
-# Query Jar Lambda outputs
-output "query_jar_lambda_name" {
-  description = "Query Jar Lambda function name"
-  value       = aws_lambda_function.query_jar.function_name
+# CRUD Jar Lambda outputs
+output "crud_jar_lambda_name" {
+  description = "CRUD Jar Lambda function name"
+  value       = aws_lambda_function.crud_jar.function_name
 }
 
-output "query_jar_lambda_arn" {
-  description = "Query Jar Lambda function ARN"
-  value       = aws_lambda_function.query_jar.arn
+output "crud_jar_lambda_arn" {
+  description = "CRUD Jar Lambda function ARN"
+  value       = aws_lambda_function.crud_jar.arn
 }
 
-# Query Notification Lambda outputs
-output "query_notification_lambda_name" {
-  description = "Query Notification Lambda function name"
-  value       = aws_lambda_function.query_notification.function_name
+# CRUD Notification Lambda outputs
+output "crud_notification_lambda_name" {
+  description = "CRUD Notification Lambda function name"
+  value       = aws_lambda_function.crud_notification.function_name
 }
 
-output "query_notification_lambda_arn" {
-  description = "Query Notification Lambda function ARN"
-  value       = aws_lambda_function.query_notification.arn
+output "crud_notification_lambda_arn" {
+  description = "CRUD Notification Lambda function ARN"
+  value       = aws_lambda_function.crud_notification.arn
 }
 
 output "lambda_role_arn" {
@@ -104,13 +104,13 @@ output "db_connection_command" {
 }
 
 # Query Test API Gateway outputs
-output "query_test_api_gateway_id" {
-  description = "Query Test API Gateway ID"
+output "crud_test_api_gateway_id" {
+  description = "CRUD Test API Gateway ID"
   value       = aws_api_gateway_rest_api.test_api.id
 }
 
-output "query_test_api_gateway_url" {
-  description = "Query Test API Gateway URL"
+output "crud_test_api_gateway_url" {
+  description = "CRUD Test API Gateway URL"
   value       = "https://${aws_api_gateway_rest_api.test_api.id}.execute-api.${var.aws_region}.amazonaws.com/v1/test"
 }
 
@@ -127,7 +127,7 @@ output "transactions_queue_arn" {
 
 output "transactions_api_url" {
   description = "API Gateway URL for transactions queue"
-  value       = "https://${aws_api_gateway_rest_api.test_api.id}.execute-api.${var.aws_region}.amazonaws.com/v1/transactions_queue"
+  value       = "https://${aws_api_gateway_rest_api.test_api.id}.execute-api.${var.aws_region}.amazonaws.com/v1/transaction/create"
 }
 
 output "sqs_processor_lambda_name" {
@@ -140,7 +140,29 @@ output "sqs_processor_lambda_arn" {
   value       = aws_lambda_function.sqs_processor.arn
 }
 
-output "query_test_api_gateway_name" {
-  description = "Query Test API Gateway name"
+# CRUD User Lambda outputs
+output "crud_user_lambda_name" {
+  description = "CRUD User Lambda function name"
+  value       = aws_lambda_function.crud_user.function_name
+}
+
+output "crud_user_lambda_arn" {
+  description = "CRUD User Lambda function ARN"
+  value       = aws_lambda_function.crud_user.arn
+}
+
+# CRUD Goal Lambda outputs
+output "crud_goal_lambda_name" {
+  description = "CRUD Goal Lambda function name"
+  value       = aws_lambda_function.crud_goal.function_name
+}
+
+output "crud_goal_lambda_arn" {
+  description = "CRUD Goal Lambda function ARN"
+  value       = aws_lambda_function.crud_goal.arn
+}
+
+output "crud_test_api_gateway_name" {
+  description = "CRUD Test API Gateway name"
   value       = aws_api_gateway_rest_api.test_api.name
 }

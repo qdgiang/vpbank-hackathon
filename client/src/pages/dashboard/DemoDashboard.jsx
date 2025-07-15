@@ -29,7 +29,6 @@ import {
 import { motion } from 'framer-motion';
 import JarSettings from '../../components/JarSettings';
 import GoalSettings from '../../components/GoalSettings';
-import { useBank } from '../../contexts/BankContext';
 import { useNavigate } from 'react-router-dom';
 import TransactionInputButton from '../../components/TransactionInput';
 import NotificationCenter from '../../components/NotificationCenter';
@@ -48,7 +47,6 @@ import TransactionManagementCard from '../../components/TransactionManagementCar
 const DemoDashboard = () => {
   const pieChartRef = useRef(null);
   const am5RootRef = useRef(null);
-  const { bankInfo, disconnectBank } = useBank();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const transactions = useSelector(state => state.transactions.transactions) || [];
@@ -56,10 +54,7 @@ const DemoDashboard = () => {
   const user = useSelector(state => state.auth.currentUser);
   const notifications = useSelector(state => state.notifications.notifications); // If notifications in redux, else keep local
   const goals = useSelector(state => state.goals.goals); // If goals in redux, else keep local
-  // Nếu goals được quản lý qua redux, có thể bỏ useState. Nếu cần local state, dùng dòng sau:
-  // const [goals, setGoals] = useState([]);
-  // const [setGoals] = useState(() => () => {}); // Dummy setGoals để tránh lỗi ReferenceError
-  // const [setTransactions] = useState(() => () => {}); // Dummy setTransactions để tránh lỗi ReferenceError
+
   const [notificationFilter, setNotificationFilter] = useState('all');
   const [overviewTab, setOverviewTab] = useState(0);
   const [statTab, setStatTab] = useState('income');
@@ -94,14 +89,39 @@ const DemoDashboard = () => {
     chartMonths.push(monthDate.format('MMM'));
   }
   
+  // Các loại là thu (+)
+  const IN_TYPES = [
+    'transfer_in',
+    'cashback',
+    'refund',
+    'opensaving',
+    'opendeposit',
+    'openaccumulation'
+  ];
+  // Các loại là chi (-)
+  const OUT_TYPES = [
+    'transfer_out',
+    'qrcode_payment',
+    'atm_withdrawal',
+    'service_fee',
+    'loan_repayment',
+    'stock',
+    'bill_payment',
+    'mobile_topup'
+  ];
+  function getTransactionSign(tranx_type) {
+    if (IN_TYPES.includes(tranx_type)) return 1;
+    if (OUT_TYPES.includes(tranx_type)) return -1;
+    return 0;
+  }
   // Tính income/expense theo tháng
   const incomeData = chartMonths.map(month =>
-    transactions.filter(tx => tx.amount > 0 && dayjs(tx.txn_time).format('MMM') === month)
-      .reduce((sum, tx) => sum + tx.amount, 0)
+    transactions.filter(tx => getTransactionSign(tx.tranx_type) > 0 && dayjs(tx.txn_time).format('MMM') === month)
+      .reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0)
   );
   const expenseData = chartMonths.map(month =>
-    transactions.filter(tx => tx.amount < 0 && dayjs(tx.txn_time).format('MMM') === month)
-      .reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
+    transactions.filter(tx => getTransactionSign(tx.tranx_type) < 0 && dayjs(tx.txn_time).format('MMM') === month)
+      .reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0)
   );
   const totalIncome = incomeData.reduce((a, b) => a + b, 0);
   const totalExpense = expenseData.reduce((a, b) => a + b, 0);
@@ -160,11 +180,6 @@ const DemoDashboard = () => {
         duration: 0.5
       }
     }
-  };
-
-  const handleChangeBank = () => {
-    disconnectBank();
-    navigate('/bank-demo');
   };
 
   const handleOpenNotification = () => setNotificationOpen(true);
@@ -272,12 +287,12 @@ const DemoDashboard = () => {
 
   // Danh sách jars chuẩn
   const jarList = [
-    { key: 'Necessities', name: 'Necessities', color: '#FF6B6B', description: 'Basic needs like food, housing, utilities' },
+    { key: 'NEC', name: 'Necessities', color: '#FF6B6B', description: 'Basic needs like food, housing, utilities' },
     { key: 'FFA', name: 'Financial Freedom', color: '#4ECDC4', description: 'Investments and long-term savings' },
     { key: 'LTSS', name: 'Long-term Savings', color: '#45B7D1', description: 'Emergency fund and big purchases' },
-    { key: 'Education', name: 'Education', color: '#96CEB4', description: 'Learning and personal development' },
-    { key: 'Play', name: 'Play', color: '#FFEAA7', description: 'Entertainment and fun activities' },
-    { key: 'Give', name: 'Give', color: '#DDA0DD', description: 'Charity and helping others' },
+    { key: 'EDU', name: 'Education', color: '#96CEB4', description: 'Learning and personal development' },
+    { key: 'PLY', name: 'Play', color: '#FFEAA7', description: 'Entertainment and fun activities' },
+    { key: 'GIV', name: 'Give', color: '#DDA0DD', description: 'Charity and helping others' },
   ];
 
   // Filter transactions theo tháng đã chọn
@@ -286,7 +301,7 @@ const DemoDashboard = () => {
     : transactions.filter(tx => dayjs(tx.txn_time).format('MMM YYYY') === selectedMonth);
 
   // Tổng số dư hiện tại = tổng tất cả các transaction (income - expense) trong tháng đã chọn
-  const totalBalance = filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const totalBalance = filteredTransactions.reduce((sum, tx) => sum + getTransactionSign(tx.tranx_type) * Math.abs(Number(tx.amount)), 0);
 
   // Mock goals
   const mockGoals = [
@@ -300,7 +315,7 @@ const DemoDashboard = () => {
       tx => (tx.msg_content || '').toLowerCase().includes(goal.name.toLowerCase()) ||
             (tx.msg_content || '').toLowerCase().includes('tiết kiệm')
     );
-    const saved = goalTxs.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0);
+    const saved = goalTxs.reduce((sum, tx) => sum + (getTransactionSign(tx.tranx_type) > 0 ? Math.abs(Number(tx.amount)) : 0), 0);
     const percent = Math.min(100, (saved / goal.target) * 100);
     // ETA: số tháng còn lại = (target - saved) / tốc độ tiết kiệm TB/tháng
     const months = Array.from(new Set(goalTxs.map(tx => dayjs(tx.txn_time).format('YYYY-MM'))));
@@ -312,15 +327,15 @@ const DemoDashboard = () => {
   // Rename the local jars variable to computedJars to avoid redeclaration
   const computedJars = jarList.map(jar => {
     const spent = filteredTransactions.filter(tx => {
-      const jarKey = tx.jar || classifyTransaction(tx);
-      return jarKey === jar.key && tx.amount < 0;
-    }).reduce((sum, tx) => sum + Math.abs(tx.amount), 0) || 0;
+      const jarKey = tx.category_label || classifyTransaction(tx);
+      return jarKey === jar.key && getTransactionSign(tx.tranx_type) < 0;
+    }).reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0) || 0;
     // Tính actualPercent dựa trên tổng chi tiêu các jar trong tháng đã chọn
     const totalExpenseAllJars = jarList.reduce((sum, jar) => {
       return sum + filteredTransactions.filter(tx => {
-        const jarKey = tx.jar || classifyTransaction(tx);
-        return jarKey === jar.key && tx.amount < 0;
-      }).reduce((s, tx) => s + Math.abs(tx.amount), 0);
+        const jarKey = tx.category_label || classifyTransaction(tx);
+        return jarKey === jar.key && getTransactionSign(tx.tranx_type) < 0;
+      }).reduce((s, tx) => s + Math.abs(Number(tx.amount)), 0);
     }, 0);
     const actualPercent = totalExpenseAllJars > 0 ? (spent / totalExpenseAllJars) * 100 : 0;
     const setPercent = Number(jarList.find(j => j.key === jar.key)?.percent) || 0; // Assuming jarList has a 'percent' property
@@ -449,13 +464,6 @@ const DemoDashboard = () => {
             >
               SmartJarvis
             </Typography>
-            {bankInfo && (
-              <Chip
-                label={`Bank: ${bankInfo.name}`}
-                avatar={<Avatar src={bankInfo.logo} />}
-                sx={{ ml: 2 }}
-              />
-            )}
           </Box>
           
           <Box display="flex" alignItems="center" gap={2}>
@@ -465,7 +473,7 @@ const DemoDashboard = () => {
               variant="outlined"
               size="small"
             />
-            <Button variant="outlined" color="secondary" onClick={handleChangeBank} sx={{ borderRadius: 2, fontWeight: 'bold', px: 2, py: 0.5, minWidth: 0 }} >
+            <Button variant="outlined" color="secondary" onClick={() => navigate('/bank-demo')} sx={{ borderRadius: 2, fontWeight: 'bold', px: 2, py: 0.5, minWidth: 0 }} >
              Disconnect
             </Button>
             {/* Notification Bell */}

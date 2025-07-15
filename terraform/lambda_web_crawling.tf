@@ -110,7 +110,6 @@ resource "aws_lambda_function" "web_crawling" {
   environment {
     variables = {
       S3_BUCKET   = aws_s3_bucket.web_crawl_output.bucket
-      AWS_REGION  = var.aws_region
     }
   }
 }
