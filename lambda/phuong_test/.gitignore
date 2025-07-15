@@ -1,0 +1,23 @@
+# Lambda artifacts
+lambda.zip
+lambda-layer.zip
+layer/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Environment files
+.env
+.venv
+
+# IDE files
+.vscode/
+.idea/
+
+# Test files
+test_output.json
