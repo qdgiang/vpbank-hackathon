@@ -1,6 +1,9 @@
 from datetime import datetime
 import calendar
 import pytz
+import logging
+
+logger = logging.getLogger(__name__)
 
 VN_tz = pytz.timezone('Asia/Ho_Chi_Minh')
 

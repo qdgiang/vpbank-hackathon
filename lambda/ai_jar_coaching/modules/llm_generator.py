@@ -3,8 +3,7 @@ import json
 import boto3
 import logging
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 import random
 import time
 from botocore.exceptions import ClientError

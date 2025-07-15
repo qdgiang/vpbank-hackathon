@@ -1,1 +1,29 @@
 2025-07-15 09:32:35 - INFO - Loading cached SSO token for test_sess
+2025-07-15 09:32:38 - INFO - Submitted fine-tuning job: arn:aws:bedrock:us-west-2:055029294644:model-customization-job/meta.llama3-2-3b-instruct-v1:0:128k/lbi463iwiyk4
+2025-07-15 09:32:38 - INFO - Waiting for job to complete…
+2025-07-15 09:32:38 - INFO - Status: InProgress
+2025-07-15 09:33:39 - INFO - Status: InProgress
+2025-07-15 09:34:39 - INFO - Status: InProgress
+2025-07-15 09:35:39 - INFO - Status: InProgress
+2025-07-15 09:36:39 - INFO - Status: InProgress
+2025-07-15 09:37:40 - INFO - Status: InProgress
+2025-07-15 09:38:40 - INFO - Status: InProgress
+2025-07-15 09:39:41 - INFO - Status: InProgress
+2025-07-15 09:40:41 - INFO - Status: InProgress
+2025-07-15 09:41:41 - INFO - Status: InProgress
+2025-07-15 09:42:41 - INFO - Status: InProgress
+2025-07-15 09:43:42 - INFO - Status: InProgress
+2025-07-15 09:44:42 - INFO - Status: InProgress
+2025-07-15 09:45:42 - INFO - Status: InProgress
+2025-07-15 09:46:43 - INFO - Status: InProgress
+2025-07-15 09:47:43 - INFO - Status: InProgress
+2025-07-15 09:48:43 - INFO - Status: InProgress
+2025-07-15 09:49:44 - INFO - Status: InProgress
+2025-07-15 09:50:44 - INFO - Status: InProgress
+2025-07-15 09:51:44 - INFO - Status: InProgress
+2025-07-15 09:52:45 - INFO - Status: InProgress
+2025-07-15 09:53:45 - INFO - Status: InProgress
+2025-07-15 09:54:45 - INFO - Status: InProgress
+2025-07-15 09:55:46 - INFO - Status: InProgress
+2025-07-15 09:56:46 - INFO - Status: InProgress
+2025-07-15 09:57:46 - INFO - Status: InProgress
