@@ -1,8 +1,9 @@
 import json
 from typing import Dict, List, Optional
 import boto3
-from unidecode import unidecode
-import fasttext
+
+#from unidecode import unidecode
+#import fasttext
 
 # --------------- CONFIGS -------------
 _SPECIAL_TYPES = {"qrcode_payment", "transfer_out", "atm_withdrawal"}
@@ -33,6 +34,15 @@ TRANX_TYPE_VIETNAMESE = {
     "refund": "Hoàn trả"
 }
 
+LABEL_VIETNAMESE = {
+    "NEC": "Nhu cầu thiết yếu",
+    "GIVE": "Cho đi / Tương lai",
+    "LTSS": "Tiết kiệm dài hạn",
+    "FFA": "Tự do tài chính",
+    "EDU": "Giáo dục",
+    "PLAY": "Giải trí"
+}
+
 TRANX_TYPE_TO_LABEL = {
     "service_fee": "NEC",          # Phí dịch vụ ngân hàng, SMS,...
     "loan_repayment": "NEC",       # Trừ tiền tự động trả khoản vay
@@ -47,13 +57,16 @@ TRANX_TYPE_TO_LABEL = {
 # --------TEXT PREPROCESSING ---------
 def _normalize(text: str) -> str:
     """Bỏ None, lower‑case & bỏ dấu để tiện match."""
-    return unidecode(text or "").lower()
-
+    #return unidecode(text or "").lower()
+    if text is None:
+        return ""
+    return text.lower()
 
 def _detect_label(text_joined: str) -> Optional[str]:
     """Trả về label match đầu tiên (dựa theo thứ tự trong _KEYWORDS)."""
     for label, kw_list in _KEYWORDS.items():
         for kw in kw_list:
+            print(f'keyword: {kw} - text_joined: {text_joined}')
             if kw in text_joined:
                 return label
     return None
@@ -85,7 +98,7 @@ def embed_text(text: str):
     return model.get_sentence_vector(text)
 
 # -------- LAMBDA HANDLER ------------
-def lambda_handler(event, context):
+def handler(event, context):
     """
     Parameters
     ----------
@@ -98,6 +111,7 @@ def lambda_handler(event, context):
     -------
     dict
         {
+          "transaction_id": <string>,
           "label": <one of NEC|FFA|LTSS|GIVE|PLAY|EDU>,
           "response_msg": <string>
         }
@@ -122,7 +136,8 @@ def lambda_handler(event, context):
                 "Nếu bạn muốn chỉnh sửa, hãy phản hồi nhé!"
             )
             return {
-                "label": TRANX_TYPE_TO_LABEL[tranx_type],
+                "transaction_id": transaction_id,
+                "jar": TRANX_TYPE_TO_LABEL[tranx_type],
                 "response_msg": response_msg,
             }
 
@@ -137,50 +152,55 @@ def lambda_handler(event, context):
                 ],
             )
         )
+        print(text_joined)
         label = _detect_label(text_joined)
+        print(f'Label: {label}')
         if label:
             response_msg = (
-                f"Phát hiện keyword liên quan tới nhóm {TRANX_TYPE_VIETNAMESE[label]}, "
+                f"Phát hiện keyword liên quan tới nhóm {label} ({LABEL_VIETNAMESE[label]}), "
                 "bạn có muốn chỉnh sửa không?"
             )
+            return {
+                "transaction_id": transaction_id,
+                "jar": label,
+                "response_msg": response_msg,
+            }
 
         # 3. Không có keyword → ML Model
-        if label is None:
-            label = 'NEC'
-            response_msg = "Default"
+        label = 'NEC'
+        response_msg = "Default"
+        # Preprocessing data for ML model ---> dev...
+        # vec = embed_text(text_joined)
+        # embedding = vec.astype(float).tolist()  # JSON serialisable
+        # logger.info(f'Text embedding: {embedding}')  # check embeddings
 
-            # Preprocessing data for ML model ---> dev...
-            vec = embed_text(text_joined)
-            embedding = vec.astype(float).tolist()  # JSON serialisable
-            logger.info(f'Text embedding: {embedding}')  # check embeddings
-
-            # features = {
-            #     "tranx_id": tranx_id,
-            #     "user_id": user_id,
-            #     "amount": amount,
-            #     "txn_time": txn_time,
-            #     "msg_content": msg_content,
-            #     "tranx_type": tranx_type,
-            #     "channel": channel,
-            #     "location": location,
-            #     "embedding": embedding  # ← fastText vector (list[float])
-            # }
-            # payload = {"instances": [features]}  # TensorFlow‑style
-            # response = runtime_sm.invoke_endpoint(
-            #     EndpointName=ENDPOINT_NAME,
-            #     ContentType=CONTENT_TYPE,
-            #     Body=json.dumps(payload, default=Decimal)  # Decimal for ints > JS limit
-            # )
-            # predictions = json.loads(response["Body"].read().decode())
+        # features = {
+        #     "tranx_id": tranx_id,
+        #     "user_id": user_id,
+        #     "amount": amount,
+        #     "txn_time": txn_time,
+        #     "msg_content": msg_content,
+        #     "tranx_type": tranx_type,
+        #     "channel": channel,
+        #     "location": location,
+        #     "embedding": embedding  # ← fastText vector (list[float])
+        # }
+        # payload = {"instances": [features]}  # TensorFlow‑style
+        # response = runtime_sm.invoke_endpoint(
+        #     EndpointName=ENDPOINT_NAME,
+        #     ContentType=CONTENT_TYPE,
+        #     Body=json.dumps(payload, default=Decimal)  # Decimal for ints > JS limit
+        # )
+        # predictions = json.loads(response["Body"].read().decode())
         return {
             "transaction_id": transaction_id,
             "jar": label,
             "response_msg": response_msg,
         }
-
     except Exception as e:
         # Trả lỗi kèm trace ngắn cho debug (không nên để chi tiết quá production)
         return {
+            "transaction_id": transaction_id,
             "jar": "NEC",
             "response_msg": f"Lỗi phân loại: {str(e)}. Vui lòng thử lại hoặc liên hệ hỗ trợ.",
         }
