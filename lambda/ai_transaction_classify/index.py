@@ -1,11 +1,13 @@
-import json
-from typing import Dict, List, Optional
+import sys
+import os
+import glob
 import boto3
+from typing import Dict, List, Optional
+import numpy as np
+import json
+import re
 
-#from unidecode import unidecode
-#import fasttext
-
-# --------------- CONFIGS -------------
+# --------------- CONFIG KEYWORDS -------------
 _SPECIAL_TYPES = {"qrcode_payment", "transfer_out", "atm_withdrawal"}
 
 _KEYWORDS: Dict[str, List[str]] = {
@@ -54,7 +56,26 @@ TRANX_TYPE_TO_LABEL = {
     "mobile_topup": "NEC"          # Nạp điện thoại
 }
 
-# --------TEXT PREPROCESSING ---------
+
+# --- CONFIG CLIENT ---
+session = boto3.Session(region_name="ap-southeast-2")
+s3 = session.client("s3")
+sagemaker_runtime = session.client("sagemaker-runtime")
+
+
+# --- HELPER FUNCTIONS ---
+def embed_sentence(text: str, endpoint_name="sentence-embed-endpoint-v1") -> list[float]:
+    payload = json.dumps({"inputs": [text]})
+    resp = sagemaker_runtime.invoke_endpoint(
+        EndpointName=endpoint_name,
+        ContentType="application/json",
+        Body=payload
+    )
+    raw = json.loads(resp["Body"].read())[0][0]
+    vec = np.mean(raw, axis=0).tolist()  # Mean-pooling over token embeddings
+    csv_vec = ",".join(f"{x:.6g}" for x in vec)
+    return csv_vec
+
 def _normalize(text: str) -> str:
     """Bỏ None, lower‑case & bỏ dấu để tiện match."""
     #return unidecode(text or "").lower()
@@ -71,51 +92,36 @@ def _detect_label(text_joined: str) -> Optional[str]:
                 return label
     return None
 
-# -------- FASTTEXT PROCESS ----------
-S3_MODEL_URI = "s3://test-vpb-hackathon/models/cc.vi.300.bin"
-LOCAL_MODEL_PATH = "/tmp/cc.vi.300.bin"
 
-_embed_model = None  # cached model
+def _classify_using_ML(payload, endpoint_name="txn-classifier-endpoint-v1"):
+    resp = sagemaker_runtime.invoke_endpoint(
+            EndpointName=endpoint_name,
+            ContentType="application/json",
+            Body=json.dumps(payload)
+    )
+    body_str = resp["Body"].read().decode()
+    preds = json.loads(body_str)
+    label_idx = int(np.argmax(preds))
+    prob = float(np.max(preds))
 
-def load_fasttext_model():
-    """Load fastText model từ S3 về /tmp, và cache toàn cục."""
-    global _embed_model
-    if _embed_model is not None:
-        return _embed_model
+    # Mapping chỉ mục → tên nhãn
+    LABELS = ["NEC", "FFA", "PLAY", "EDU", "GIVE", "LTSS"]
+    predicted_label = LABELS[label_idx]
 
-    if not os.path.exists(LOCAL_MODEL_PATH):
-        print("⏬ Tải model từ S3...")
-        s3 = boto3.client("s3")
-        bucket, key = S3_MODEL_URI.replace("s3://", "").split("/", 1)
-        s3.download_file(bucket, key, LOCAL_MODEL_PATH)
-        print("✅ Model đã được tải về /tmp")
+    return {
+        "predicted_label": predicted_label,
+        "probability": prob
+    }
 
-    _embed_model = fasttext.load_model(LOCAL_MODEL_PATH)
-    return _embed_model
+# --- PROCESSING FUNCTIONS ---
+def response(status, body):
+    return {
+        'statusCode': status,
+        'body': json.dumps(body, default=str),
+        'headers': {'Content-Type': 'application/json'}
+    }
 
-def embed_text(text: str):
-    model = load_fasttext_model()
-    return model.get_sentence_vector(text)
-
-# -------- LAMBDA HANDLER ------------
 def handler(event, context):
-    """
-    Parameters
-    ----------
-    event : dict
-        Payload đầu vào.
-    context : LambdaContext
-        Thông tin runtime (không dùng tới ở đây).
-
-    Returns
-    -------
-    dict
-        {
-          "transaction_id": <string>,
-          "label": <one of NEC|FFA|LTSS|GIVE|PLAY|EDU>,
-          "response_msg": <string>
-        }
-    """
     try:
         # Load data
         transaction_id = event.get("transaction_id", "")
@@ -129,19 +135,20 @@ def handler(event, context):
         channel = event.get("channel", "MOBILE")
         tranx_type = event.get("tranx_type", "transfer_out").lower()
 
-        # 1. tranx_type không thuộc 3 loại đặc biệt
+        # 1. Classify by tranx_type
         if tranx_type not in _SPECIAL_TYPES:
             response_msg = (
                 f"Chúng tôi phân loại giao dịch dựa trên loại giao dịch: '{TRANX_TYPE_VIETNAMESE[tranx_type]}'. "
                 "Nếu bạn muốn chỉnh sửa, hãy phản hồi nhé!"
             )
-            return {
+            body = {
                 "transaction_id": transaction_id,
                 "jar": TRANX_TYPE_TO_LABEL[tranx_type],
                 "response_msg": response_msg,
             }
+            return response(200, body)
 
-        # 2. Ghép nội dung & dò keyword
+        # 2. Classify by keywords
         text_joined = " ".join(
             filter(
                 None,
@@ -152,55 +159,47 @@ def handler(event, context):
                 ],
             )
         )
-        print(text_joined)
         label = _detect_label(text_joined)
-        print(f'Label: {label}')
         if label:
             response_msg = (
                 f"Phát hiện keyword liên quan tới nhóm {label} ({LABEL_VIETNAMESE[label]}), "
                 "bạn có muốn chỉnh sửa không?"
             )
-            return {
+            body = {
                 "transaction_id": transaction_id,
                 "jar": label,
                 "response_msg": response_msg,
             }
+            return response(200, body)
 
-        # 3. Không có keyword → ML Model
-        label = 'NEC'
-        response_msg = "Default"
-        # Preprocessing data for ML model ---> dev...
-        # vec = embed_text(text_joined)
-        # embedding = vec.astype(float).tolist()  # JSON serialisable
-        # logger.info(f'Text embedding: {embedding}')  # check embeddings
-
-        # features = {
-        #     "tranx_id": tranx_id,
-        #     "user_id": user_id,
-        #     "amount": amount,
-        #     "txn_time": txn_time,
-        #     "msg_content": msg_content,
-        #     "tranx_type": tranx_type,
-        #     "channel": channel,
-        #     "location": location,
-        #     "embedding": embedding  # ← fastText vector (list[float])
-        # }
-        # payload = {"instances": [features]}  # TensorFlow‑style
-        # response = runtime_sm.invoke_endpoint(
-        #     EndpointName=ENDPOINT_NAME,
-        #     ContentType=CONTENT_TYPE,
-        #     Body=json.dumps(payload, default=Decimal)  # Decimal for ints > JS limit
-        # )
-        # predictions = json.loads(response["Body"].read().decode())
-        return {
-            "transaction_id": transaction_id,
-            "jar": label,
-            "response_msg": response_msg,
+        # 3. Keyword not found -> Call ML <dev...>
+        joined_text = " ".join([s or "" for s in (msg_content, merchant, to_account_name)])
+        joined_text = re.sub(r"\s+", " ", joined).strip()
+        sentence_embedding = embed_sentence(joined_text)
+        payload = {
+            "user_id": user_id,
+            "amount": amount,
+            "txn_time": txn_time,
+            "msg_content": msg_content,
+            "merchant": merchant,
+            "to_account_name": to_account_name,
+            "location": location,
+            "channel": channel,
+            "tranx_type": tranx_type,
+            "sentence_embedding": sentence_embedding
         }
+        #jar = _classify_using_ML(payload)
+        body = {
+            "transaction_id": transaction_id,
+            "jar": 'NEC',
+            "response_msg": 'Dùng ML đó',
+        }
+        return response(200, body)
+
     except Exception as e:
-        # Trả lỗi kèm trace ngắn cho debug (không nên để chi tiết quá production)
         return {
-            "transaction_id": transaction_id,
-            "jar": "NEC",
-            "response_msg": f"Lỗi phân loại: {str(e)}. Vui lòng thử lại hoặc liên hệ hỗ trợ.",
+            "statusCode": 500,
+            "error": str(e)
         }
+    return 0
+

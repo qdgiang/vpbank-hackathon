@@ -34,25 +34,31 @@ def parse_args():
     parser.add_argument("--test-split",    type=float, default=0.2)
     parser.add_argument("--rng-seed",      type=int,   default=42)
     parser.add_argument("--model_dir",     type=str,   default="/opt/ml/model")
+    parses.add_argument("--bucket",        type=str,   default="smart-jarvis-sagemaker")
     return parser.parse_args()
 
 
-def get_user_sequences(struct_path, text_path, args):
+def get_user_sequences(input_path, args):
     """Return padded_seq, user_ids, scaler"""
-    df_struct = pd.read_csv(struct_path)
-    df_text   = pd.read_csv(text_path)
+    df = pd.read_csv(input_path)
 
-    df_struct = df_struct.drop(["category_label", "tranx_type"], axis=1)
-    df_text   = df_text.drop(["category_label", "tranx_type", "user_id"], axis=1)
+    # Preprocess text embedding
+    df["embedding_list"] = df["sentence_embedding"].apply(json.loads)
+    embedding_df = pd.DataFrame(df["embedding_list"].tolist())
+    df = pd.concat([df, embedding_df], axis=1)
+    df.drop(columns=["sentence_embedding", "embedding_list"], inplace=True)
 
-    merged = df_struct.merge(df_text, how="inner", on="transaction_id")
-    merged = merged.sort_values(["user_id", "txn_time"])
+    # Drop redundant columns
+    df.drop(columns=["category_label", "tranx_type"], inplace=True)
+
+    # Group by user_id
+    df = df.sort_values(["user_id", "txn_time"])
 
     drop_cols    = {"transaction_id", "txn_time", "user_id"}
-    feature_cols = [c for c in merged.columns if c not in drop_cols]
+    feature_cols = [c for c in df.columns if c not in drop_cols]
 
     scaler = StandardScaler()
-    merged[feature_cols] = scaler.fit_transform(merged[feature_cols])
+    df[feature_cols] = scaler.fit_transform(df[feature_cols])
 
     seqs = [
         group[feature_cols].to_numpy()[-args.max_seq_len:]
@@ -94,7 +100,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     # Preprocess input
-    padded, user_ids, scaler, feat_dim = get_user_sequences(INPUT_STRUCT_PATH, INPUT_TEXT_PATH, args)
+    padded, user_ids, scaler, feat_dim = get_user_sequences(INPUT_PATH, args)
     num_users = padded.shape[0]
     split_idx = int(num_users * (1 - args.test_split))
     X_train, X_val = padded[:split_idx], padded[split_idx:]
@@ -121,8 +127,8 @@ if __name__ == '__main__':
     df_emb.to_csv(emb_path, index=False)
 
     # Upload to S3
-    bucket = "test-vpb-hackathon"
-    key    = f"autoencoder_output/{os.environ['TRAINING_JOB_NAME']}/output/data/user_embeddings.csv"
+    bucket = args.bucket
+    key    = f"features/user_embeddings.csv"
 
     s3 = boto3.client("s3")
     s3.upload_file(emb_path, bucket, key)

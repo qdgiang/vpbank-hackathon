@@ -17,8 +17,9 @@ SAGEMAKER_INSTANCE = os.getenv("SAGEMAKER_JOB_INSTANCE")
 
 INPUT_LOCAL_DIR = "/opt/ml/processing/input/raw-data/"
 OUTPUT_LOCAL_DIR = "/opt/ml/processing/output/"
-INPUT_S3_URI = "s3://test-vpb-hackathon/raw/"
-OUTPUT_S3_URI = "s3://test-vpb-hackathon/preprocessed/"
+S3_BUCKET = os.getenv("S3_BUCKET")
+INPUT_S3_URI = f"s3://{S3_BUCKET}/{os.getenv('S3_RAW_KEY')}"
+OUTPUT_S3_URI = f"s3://{S3_BUCKET}/{os.getenv('S3_FEATURES_KEY')}"
 
 def main():
     # Create session
@@ -58,7 +59,7 @@ def main():
         ],
         arguments=[
             "--trans_file", "synthetic_transactions.csv",
-            "--users_file", "synthetic_users.csv"
+            "--embed_endpoint_name", os.getenv("EMBEDDER_ENDPOINT_NAME")
         ]
     )
 

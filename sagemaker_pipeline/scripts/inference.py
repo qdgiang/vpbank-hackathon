@@ -66,40 +66,6 @@ def _load_artifacts():
 
     return _ARTIFACTS
 
-def _get_model_path(s3_uri: str, local_dir: str = "/tmp/models") -> str:
-    """
-    Download a FastText .bin model from S3 and return the local file path.
-    """
-    bucket, key = s3_uri.replace("s3://", "").split("/", 1)
-    os.makedirs(local_dir, exist_ok=True)
-    local_path = os.path.join(local_dir, os.path.basename(key))
-    boto3.client("s3").download_file(bucket, key, local_path)
-    return local_path
-
-
-def _normalise(text: str) -> str:
-    """Lower‑case, strip accents (optional) & remove non‑alphanumerics."""
-    text = text.lower()
-    text = unidecode(text)
-    text = self._NORMALISE_RE.sub(" ", text)
-    return re.sub(r"\s+", " ", text).strip()
-
-def embed_sentence(text) -> np.ndarray:
-    """Return 1‑D np.ndarray (float32) of length `self.dim` for a sentence.
-
-    * Normalises text (see :py:meth:`_normalise`).
-    * Splits on whitespace (FastText handles OOV via sub‑words).
-    * Returns zeros when no valid tokens.
-    """
-    if not text:
-        # All zeros for empty / NaN input
-        return np.zeros(dim, dtype=np.float32)
-
-    norm = _normalise(text)
-    if not norm:
-        return np.zeros(dim, dtype=np.float32)
-
-    return emb_model.get_sentence_vector(norm).astype(np.float32)
 
 def get_struct_features(features, artefacts):
     # Handle amount
