@@ -11,7 +11,7 @@ exports.notificationCreate = (data, token) => axios.post(`${API_GATEWAY_BASE}/no
 exports.notificationMarkRead = (data, token) => axios.patch(`${API_GATEWAY_BASE}/notification/${data.id}/status`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 
 // ========== TRANSACTION ==========
-exports.transactionSearch = (data, token) => axios.post(`${API_GATEWAY_BASE}/transactions/search`, data, { headers: getAuthHeader(token) }).then(r => r.data);
+exports.transactionSearch = (data, token) => axios.post(`${API_GATEWAY_BASE}/transaction/search`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 exports.transactionCreate = (data, token) => axios.post(`${API_GATEWAY_BASE}/transaction/create`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 exports.transactionClassify = (data, token) => axios.patch(`${API_GATEWAY_BASE}/transaction/${data.id}/classify`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 

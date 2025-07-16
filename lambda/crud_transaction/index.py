@@ -36,12 +36,12 @@ def handler(event, context):
     method = event.get('httpMethod')
 
     try:
-        # New endpoints
-        if path == "/search" and method == "POST":
+        # Đúng chuẩn REST endpoint
+        if path == "/transaction/search" and method == "POST":
             return search_transactions(event)
-        elif path == "/create" and method == "POST":
+        elif path == "/transaction/create" and method == "POST":
             return create_transaction(event, enhanced=True)
-        elif path and path.endswith("/classify") and method == "PATCH":
+        elif path and path.startswith("/transaction/") and path.endswith("/classify") and method == "PATCH":
             return classify_transaction(event)
         else:
             return response(404, {"error": "Not Found"})

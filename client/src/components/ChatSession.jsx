@@ -147,7 +147,7 @@ const ChatSession = ({ userId, onLogout }) => {
     <div className="chat-session" style={{width: 380, maxWidth: 400, margin: "0 auto", borderRadius: 20, boxShadow: "0 4px 24px #0002", background: "#fff", overflow: "hidden", border: 'none'}}>
       {/* Header chat */}
       <div style={{
-        padding: '8px 14px 8px 14spx',
+        padding: '8px 14px 8px 14px',
         display: 'flex',
         alignItems: 'center',
         borderTopLeftRadius: 20,
