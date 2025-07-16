@@ -141,9 +141,45 @@ function NotificationItem({ noti, transactions, onRead, onDelete }) {
 const NotificationCenter = ({ transactions }) => {
   const dispatch = useDispatch();
   const { notifications, loading } = useSelector(state => state.notifications);
+  // --- Polling state ---
+  const [polledNotifications, setPolledNotifications] = useState([]);
+  const [lastSeenTime, setLastSeenTime] = useState(() => localStorage.getItem('last_seen_time') || null);
+  const intervalRef = useRef();
+  const user_id = useSelector(state => state.auth.user?.user_id); // adjust if user_id is elsewhere
+
+  // Polling fetchNotifications every 30s
   useEffect(() => {
-    dispatch(fetchNotificationsData());
-  }, [dispatch]);
+    if (!user_id) return;
+    function fetchNotifications() {
+      const token = localStorage.getItem('token');
+      const body = {
+        pagination: { page_size: 20, current: 1 },
+        filters: lastSeenTime ? { from_date: lastSeenTime } : {}
+      };
+      fetch('/api/v1/notification/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(body)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.notifications && data.notifications.length > 0) {
+          setPolledNotifications(prev => [...data.notifications, ...prev]);
+          setLastSeenTime(data.notifications[0].created_at);
+          localStorage.setItem('last_seen_time', data.notifications[0].created_at);
+        }
+      });
+    }
+    fetchNotifications();
+    intervalRef.current = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(intervalRef.current);
+  }, [user_id, lastSeenTime]);
+
+  // Merge polledNotifications with Redux notifications (avoid duplicates)
+  const mergedNotifications = [...polledNotifications, ...notifications.filter(n => !polledNotifications.some(pn => pn.notification_id === n.notification_id))];
 
   const [tab, setTab] = useState(0); // 0: All, 1: Unread
   const [typeFilter, setTypeFilter] = useState('all');
@@ -156,7 +192,7 @@ const NotificationCenter = ({ transactions }) => {
   const handleViewAllClose = () => setViewAllOpen(false);
   const handleLoadMore = () => setLazyCount(c => c + 20);
 
-  let filtered = notifications;
+  let filtered = mergedNotifications;
   if (tab === 1) filtered = filtered.filter(n => n.status === 0);
   if (typeFilter !== 'all') filtered = filtered.filter(n => n.notification_type === typeFilter);
   // Sort by created_at desc
@@ -183,10 +219,18 @@ const NotificationCenter = ({ transactions }) => {
 
   // Replace onRead and onDelete handlers:
   const handleRead = (id) => {
-    const noti = notifications.find(n => n.notification_id === id);
-    if (noti && noti.status === 0) {
-      dispatch(updateNotificationData({ id, data: { ...noti, status: 1, read: true } }));
-    }
+    // Mark as read via API
+    fetch(`/api/v1/notification/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'read' })
+    })
+    .then(res => res.json())
+    .then(() => {
+      // Update local state
+      setPolledNotifications(prev => prev.map(n => n.notification_id === id ? { ...n, status: 1 } : n));
+      dispatch(updateNotificationData({ id, data: { status: 1, read: true } }));
+    });
   };
   const handleDelete = (id) => {
     dispatch(deleteNotificationData(id));

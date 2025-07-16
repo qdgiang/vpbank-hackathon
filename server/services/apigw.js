@@ -11,9 +11,7 @@ exports.notificationCreate = (data, token) => axios.post(`${API_GATEWAY_BASE}/no
 exports.notificationMarkRead = (data, token) => axios.patch(`${API_GATEWAY_BASE}/notification/${data.id}/status`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 
 // ========== TRANSACTION ==========
-exports.transactionSearch = (data) => axios.get(`${API_GATEWAY_BASE}/test`, data).then(r => r.data);
-// exports.transactionSearch = (data, token) => axios.post(`${API_GATEWAY_BASE}/test`, data, { headers: getAuthHeader(token) }).then(r => r.data);
-// exports.transactionSearch = (data, token) => axios.post(`${API_GATEWAY_BASE}/transaction/search`, data, { headers: getAuthHeader(token) }).then(r => r.data);
+exports.transactionSearch = (data, token) => axios.post(`${API_GATEWAY_BASE}/transactions/search`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 exports.transactionCreate = (data, token) => axios.post(`${API_GATEWAY_BASE}/transaction/create`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 exports.transactionClassify = (data, token) => axios.patch(`${API_GATEWAY_BASE}/transaction/${data.id}/classify`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 
@@ -29,7 +27,6 @@ exports.goalUpdate = (data, token) => axios.put(`${API_GATEWAY_BASE}/goal/${data
 exports.goalRemove = (data, token) => axios.delete(`${API_GATEWAY_BASE}/goal/${data.id}`, { data, headers: getAuthHeader(token) }).then(r => r.data);
 
 // ========== AI ==========
-exports.aiTransactionClassify = (data, token) => axios.post(`${API_GATEWAY_BASE}/ai/transaction/classify`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 exports.aiJarCoaching = (data, token) => axios.post(`${API_GATEWAY_BASE}/ai/jar/coaching`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 exports.aiGoalCoaching = (data, token) => axios.post(`${API_GATEWAY_BASE}/ai/goal/coaching`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 
