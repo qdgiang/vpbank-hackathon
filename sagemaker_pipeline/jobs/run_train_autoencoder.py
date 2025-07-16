@@ -51,6 +51,7 @@ def main():
             "latent-dim":  64,
             "gru-units":   128,
             "epochs":      60,
+            "bucket": BUCKET
         },
     )
     logger.info('Created Keras Estimator')
@@ -63,8 +64,7 @@ def main():
     logger.info('Trained Keras Estimator')
 
     # Get URI of user_embeddings
-    train_job_name = keras_estimator.latest_training_job.name
-    emb_s3_uri = f"{S3_OUTPUT_URI}{train_job_name}/output/data/user_embeddings.csv"
+    emb_s3_uri = f"s3://{BUCKET}/features/user_embeddings.csv"
     logger.info(f"Embeddings @{emb_s3_uri}")
 
     # Create processor to ingest to feature-store
