@@ -166,3 +166,29 @@ output "crud_test_api_gateway_name" {
   description = "CRUD Test API Gateway name"
   value       = aws_api_gateway_rest_api.test_api.name
 }
+
+# S3 and CloudFront outputs
+output "s3_bucket_name" {
+  description = "S3 bucket name for client website"
+  value       = aws_s3_bucket.client_website.bucket
+}
+
+output "s3_bucket_website_endpoint" {
+  description = "S3 bucket website endpoint"
+  value       = aws_s3_bucket_website_configuration.client_website.website_endpoint
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID"
+  value       = aws_cloudfront_distribution.client_website.id
+}
+
+output "cloudfront_distribution_domain_name" {
+  description = "CloudFront distribution domain name"
+  value       = aws_cloudfront_distribution.client_website.domain_name
+}
+
+output "client_website_url" {
+  description = "Client website URL (CloudFront)"
+  value       = "https://${aws_cloudfront_distribution.client_website.domain_name}"
+}

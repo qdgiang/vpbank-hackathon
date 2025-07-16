@@ -19,7 +19,7 @@ SAGEMAKER_GPU_INSTANCE = os.getenv("SAGEMAKER_JOB_GPU_INSTANCE")
 
 # ----- Config PATHs ----
 S3_BUCKET = os.getenv("S3_BUCKET")
-S3_INPUT_URI  = f"s3://{S3_BUCKET}/preprocessed/"
+S3_INPUT_URI  = f"s3://{S3_BUCKET}/features/"
 S3_OUTPUT_URI = f"s3://{S3_BUCKET}/classifier_output/"
 
 def main():
