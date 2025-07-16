@@ -2,7 +2,7 @@ import axios from 'axios';
 import apiConfig from './api.config';
 
 const api = axios.create({
-  baseURL: apiConfig.baseURL,
+  baseURL: process.env.VITE_API_URL ? `${process.env.VITE_API_URL}${apiConfig.baseURL}` : apiConfig.baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

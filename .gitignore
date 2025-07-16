@@ -22,7 +22,7 @@ terraform.tfstate.backup
 # testing
 /coverage
 **mock**
-**test**
+**/test/
 
 # production
 build
