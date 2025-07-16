@@ -25,8 +25,7 @@ TRAIN_DIR = "/opt/ml/input/data/train"
 MODEL_DIR = "/opt/ml/model"
 OUTPUT_DIR = "/opt/ml/output"
 
-INPUT_STRUCT_PATH = os.path.join(TRAIN_DIR, "structured_features.csv")
-INPUT_TEXT_PATH = os.path.join(TRAIN_DIR, "text_features.csv")
+INPUT_PATH = os.path.join(TRAIN_DIR, "preprocessed_features.csv")
 
 EMBED_DIM = 64
 
@@ -43,7 +42,7 @@ def parse_args():
 
     parser.add_argument("--feature-group-name",  type=str, default="user-embeddings")
 
-    parser.add_argument("--bucket", type=str, default="test-vpb-hackathon")
+    parser.add_argument("--bucket", type=str, default="smart-jarvis-sagemaker")
     parser.add_argument("--model_dir", type=str,
                         default=os.environ.get("SM_MODEL_DIR", "/opt/ml/model"))
     return parser.parse_args()
@@ -124,17 +123,18 @@ def preprocess_data(args):
         The count of unique values in ``y`` (needed for a soft‑max output layer).
     """
     # Read struct_df & filter transactions
-    df = pd.read_csv(INPUT_STRUCT_PATH)
+    df = pd.read_csv(INPUT_PATH)
     df = df[df['tranx_type'].isin({'transfer_out', 'qrcode_payment', 'atm_withdrawal'})]
     cols_to_drop = ['tranx_type', 'txn_time', 'tranx_type_bill_payment', 'tranx_type_cashback',
                     'tranx_type_loan_repayment','tranx_type_mobile_topup','tranx_type_opensaving',
                     'tranx_type_stock','tranx_type_transfer_in']
     df = df.drop(cols_to_drop, axis=1)
 
-    # Merge with text_emb
-    text_df = pd.read_csv(INPUT_TEXT_PATH)
-    text_df = text_df.drop(['user_id', 'tranx_type', 'category_label'], axis=1)
-    df = df.merge(text_df, how='inner', on='transaction_id')
+    # Handle text embedding
+    df["embedding_list"] = df["sentence_embedding"].apply(json.loads)
+    embedding_df = pd.DataFrame(df["embedding_list"].tolist())
+    df = pd.concat([df, embedding_df], axis=1)
+    df.drop(columns=["sentence_embedding", "embedding_list"], inplace=True)
 
     # Merge with user_emb
     unique_uids = df["user_id"].unique()
