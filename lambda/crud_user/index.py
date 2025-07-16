@@ -41,6 +41,8 @@ def handler(event, context):
             return update_user(event)
         elif path.startswith("/users/") and method == "DELETE":
             return delete_user(event)
+        elif path == "/check_exists" and method == "POST":
+            return check_user_exists(event)
         else:
             return response(404, {"error": "Not Found"})
     except Exception as e:
@@ -138,3 +140,15 @@ def delete_user(event):
         conn.commit()
 
     return response(200, {"message": "User deleted"})
+
+def check_user_exists(event):
+    body = json.loads(event.get('body', '{}'))
+    user_id = body.get('user_id')
+    if not user_id:
+        return response(400, {"error": "user_id is required"})
+    conn = get_db_connection()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM users WHERE user_id = %s", (user_id,))
+            exists = cursor.fetchone() is not None
+    return response(200, {"exists": exists})

@@ -3,7 +3,7 @@ services:
   backend:
     build:
       context: ./server
-      dockerfile: server/dev.Dockerfile
+      dockerfile: dev.Dockerfile
     container_name: backend
     ports:
       - "5001:5001"
@@ -19,7 +19,7 @@ services:
   frontend:
     build:
       context: ./client
-      dockerfile: client/dev.Dockerfile
+      dockerfile: dev.Dockerfile
     container_name: frontend
     ports:
       - "3000:3000"

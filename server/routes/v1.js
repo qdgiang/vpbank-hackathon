@@ -3,15 +3,53 @@ const router = express.Router();
 const apigw = require('../services/apigw');
 const auth = require('../middleware/auth');
 const yup = require('yup');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'demo_secret'; // Đặt biến môi trường cho production
 
-// Middleware xác thực cho tất cả route
-// router.use(auth);
 
 // Logging middleware cho route này
 router.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} body=`, req.body);
   next();
 });
+// ========== AUTH ==========
+router.get('/auth/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await apigw.authGetById({ id });
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.post('/auth/login', async (req, res) => {
+  try {
+    // Dùng user mặc định như yêu cầu
+    const user = {
+      user_id: "000b1dd0-c880-45fd-8515-48dd705a3aa2",
+      email: "justin42@example.org",
+      hash_pwd: null,
+      phone: "001-585-307-9419",
+      identity_number: null,
+      full_name: "Võ Ngọc Huyền",
+      gender: null,
+      date_of_birth: "1993-05-24",
+      status: 0,
+      timezone: "Asia/Ho_Chi_Minh",
+      city: "TP HCM",
+      created_at: "2020-11-04 07:44:59",
+      updated_at: "2021-06-02 07:44:59",
+      is_active: 1
+    };
+    // Tạo token
+    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ user, token });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.post('/auth/logout', (req, res) => {
+  // Logout handle locally on client, just return success
+  res.json({ success: true });
+});
+// Middleware xác thực cho tất cả route
+router.use(auth);
 
 // ========== NOTIFICATION ==========
 const notificationSearchSchema = yup.object({
@@ -31,7 +69,8 @@ router.post('/notification/search', async (req, res) => {
     res.json(result);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
-router.post('/notification/create', async (req, res) => {
+// CHUẨN HÓA: Tạo notification mới
+router.post('/notification', async (req, res) => {
   try {
     const user_id = req.user.user_id;
     const { title, message, notification_type, severity, object_code, object_id } = req.body;
@@ -61,14 +100,14 @@ const transactionSearchSchema = yup.object({
 router.post('/transaction/search', async (req, res) => {
   try {
     // await transactionSearchSchema.validate(req.body);
-    // const user_id = req.user.user_id;
-    // const { pagination, filters, search_text } = req.body;
-    // const result = await apigw.transactionSearch({ user_id, pagination, filters, search_text });
-    const result = await apigw.transactionSearch({});
+    const user_id = req.user.user_id;
+    const { pagination, filters, search_text } = req.body;
+    const result = await apigw.transactionSearch({ user_id, pagination, filters, search_text });
     res.json(result);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
-router.post('/transaction/create', async (req, res) => {
+// CHUẨN HÓA: Tạo transaction mới
+router.post('/transaction', async (req, res) => {
   try {
     const user_id = req.user.user_id;
     const data = { ...req.body, user_id };
@@ -158,14 +197,6 @@ router.delete('/goal/:id', async (req, res) => {
 });
 
 // ========== AI ==========
-router.post('/ai/transaction/classify', async (req, res) => {
-  try {
-    const user_id = req.user.user_id;
-    const data = { ...req.body, user_id };
-    const result = await apigw.aiTransactionClassify(data);
-    res.json(result);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
 router.post('/ai/jar/coaching', async (req, res) => {
   try {
     const user_id = req.user.user_id;
@@ -191,24 +222,5 @@ router.post('/qna/session', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== AUTH ==========
-router.get('/auth/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await apigw.authGetById({ id });
-    res.json(result);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-router.post('/auth/login', async (req, res) => {
-  try {
-    const { username, password, by } = req.body;
-    const result = await apigw.authLogin({ username, password, by });
-    res.json(result);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-router.post('/auth/logout', (req, res) => {
-  // Logout handle locally on client, just return success
-  res.json({ success: true });
-});
 
 module.exports = router; 
