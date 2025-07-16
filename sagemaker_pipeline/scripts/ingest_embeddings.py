@@ -3,6 +3,10 @@ from datetime import datetime, timezone
 from sagemaker.feature_store.feature_group import FeatureGroup
 from sagemaker import Session
 
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
 def jsonify_vector(row):
     # Nếu Feature Store của bạn CHƯA hỗ trợ FRACTIONAL_VECTOR
     return json.dumps(row.values.tolist())
@@ -42,7 +46,7 @@ def main():
               max_workers=args.max_workers,
               wait=args.wait.lower() == "true")
 
-    print(f"✅ Ingested {len(df)} rows into FeatureGroup {args.feature_group}")
+    logger.info(f"✅ Ingested {len(df)} rows into FeatureGroup {args.feature_group}")
 
 if __name__ == "__main__":
     main()

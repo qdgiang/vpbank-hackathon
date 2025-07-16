@@ -79,7 +79,7 @@ tool_config = {
         {
             "toolSpec": {
                 "name": "query_user_jar_spending",
-                "description": "Executes a MySQL query against the 'user_jar_spending' table. Use this for questions about budgets, spending, and financial jars. Can also be used for JOIN queries with 'saving_goals'.",
+                "description": "Executes a MySQL query against the 'user_jar_spending' table. Use this for questions about current **monthly** personal spending summary. Can also be used for JOIN queries with 'saving_goals'.",
                 "inputSchema": {
                     "json": {
                         "type": "object",
@@ -97,7 +97,7 @@ tool_config = {
         {
             "toolSpec": {
                 "name": "query_saving_goals",
-                "description": "Executes a MySQL query against the 'saving_goals' table. Use this for questions about savings progress, goal targets, and deadlines. Can also be used for JOIN queries with 'user_jar_spending'.",
+                "description": "Executes a MySQL query against the 'saving_goals' table. Use this for questions about savings progress, goal targets, and deadlines. The monthly allocation for this table stems from only the LTSS jar code. Can also be used for JOIN queries with 'user_jar_spending'.",
                 "inputSchema": {
                     "json": {
                         "type": "object",

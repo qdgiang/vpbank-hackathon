@@ -1,4 +1,4 @@
-CREATE TABLE goal_setting
+CREATE TABLE saving_goals
 (
     goal_id        CHAR(36)                 DEFAULT (UUID()) NOT NULL
         PRIMARY KEY,
@@ -10,7 +10,7 @@ CREATE TABLE goal_setting
     goal_type           VARCHAR(20),
     priority_level      INTEGER                   CHECK (priority_level IN (1, 2, 3)),
     weight              NUMERIC(5,2),
-    is_active           BOOLEAN                   DEFAULT TRUE,
+    status              INTEGER                   DEFAULT 1 CHECK (status IN (0, 1, 2)),
     eta_lock            BOOLEAN                   DEFAULT FALSE,
     initial_target_date DATE,                                        NOT NULL,
     sent_money          BOOLEAN                   DEFAULT FALSE,

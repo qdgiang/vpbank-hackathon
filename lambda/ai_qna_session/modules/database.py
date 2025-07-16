@@ -3,8 +3,7 @@ import pymysql
 import logging
 from typing import List, Dict, Any
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 DB_HOST_RAW = os.environ.get("DB_HOST", "127.0.0.1")
 DB_HOST = DB_HOST_RAW.split(":")[0]

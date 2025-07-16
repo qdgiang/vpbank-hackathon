@@ -218,6 +218,7 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
 
 # if __name__ == "__main__":
 #     user_id    = "USER1"
+#     history = []
 
 #     while True:
 #         prompt = input("Enter your question (or type 'exit' to quit): ").strip()
@@ -229,11 +230,12 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
 #             "body": json.dumps({
 #                 "user_id": user_id,
 #                 "prompt": prompt,
-#             })
+#                 "history": history}, ensure_ascii=False)
 #         }
         
 #         resp = handler(test_event, None)
 #         body = json.loads(resp.get('body', '{}'))
+#         history.append(body)
 #         answer = body.get('answer', '')
 #         # used_tools = body.get('used_tools', [])
 #         print("Answer:", answer)

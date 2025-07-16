@@ -1,6 +1,6 @@
 {
   "table": "user_jar_spending",
-  "description": "Stores the user's budget allocation and spending in different categories (jars).",
+  "description": "Stores the user's **current monthly** personal spending spending in different categories (jars).",
   "columns": {
     "user_id":       "UUID – The user's unique identifier, used to join with the saving_goals table.",
     "jar_code":      "VARCHAR(10) – The code for the budget jar. Valid values: NEC (Necessities), FFA (Financial Freedom), EDU (Education), LTSS (Long Term Savings), PLY (Play), GIV (Give/Charity).",
