@@ -43,6 +43,26 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchTransactionsData, createTransactionData, updateTransactionData, deleteTransactionData } from '../../store/transactionsSlice';
 import { fetchJarsData } from '../../store/jarsSlice';
 import TransactionManagementCard from '../../components/TransactionManagementCard';
+import ChatSession from '../../components/ChatSession';
+import { setUser } from '../../store/authSlice';
+import jwtEncode from 'jwt-encode';
+
+const DEFAULT_USER = {
+  user_id: "000b1dd0-c880-45fd-8515-48dd705a3aa2",
+  email: "justin42@example.org",
+  hash_pwd: null,
+  phone: "001-585-307-9419",
+  identity_number: null,
+  full_name: "Võ Ngọc Huyền",
+  gender: null,
+  date_of_birth: "1993-05-24",
+  status: 0,
+  timezone: "Asia/Ho_Chi_Minh",
+  city: "TP HCM",
+  created_at: "2020-11-04 07:44:59",
+  updated_at: "2021-06-02 07:44:59",
+  is_active: 1
+};
 
 const DemoDashboard = () => {
   const pieChartRef = useRef(null);
@@ -51,7 +71,7 @@ const DemoDashboard = () => {
   const dispatch = useDispatch();
   const transactions = useSelector(state => state.transactions.transactions) || [];
   const jars = useSelector(state => state.dashboard.jars);
-  const user = useSelector(state => state.auth.currentUser);
+  const user = useSelector(state => state.auth.user);
   const notifications = useSelector(state => state.notifications.notifications); // If notifications in redux, else keep local
   const goals = useSelector(state => state.goals.goals); // If goals in redux, else keep local
 
@@ -61,6 +81,7 @@ const DemoDashboard = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState('All');
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   // Lấy danh sách các tháng có trong transactions
   const monthOptions = Array.from(new Set(transactions.map(tx => dayjs(tx.txn_time).format('MMM YYYY'))));
 
@@ -71,6 +92,18 @@ const DemoDashboard = () => {
     // dispatch(fetchNotificationsData()); // If notifications in redux
     // dispatch(fetchGoalsData()); // If goals in redux
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!user || !user.user_id) {
+      dispatch(setUser(DEFAULT_USER));
+      // XÓA đoạn generate JWT token FE, vì giờ token lấy từ BE qua login
+      // if (!localStorage.getItem('token')) {
+      //   const secret = import.meta.env.VITE_JWT_SECRET || 'demo-secret';
+      //   const token = jwtEncode(DEFAULT_USER, secret);
+      //   localStorage.setItem('token', token);
+      // }
+    }
+  }, [user, dispatch]);
 
   // Đồng bộ số liệu với transactions
   // Tạo mảng các tháng có trong transactions và sắp xếp theo thứ tự thời gian
@@ -877,6 +910,19 @@ const DemoDashboard = () => {
           </Grid>
         </motion.div>
       </Container>
+      {/* Floating Chat Button & ChatSession */}
+      <div style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 1300 }}>
+        {showChat ? (
+          <div style={{ boxShadow: '0 4px 24px #0002', borderRadius: 16, background: '#fff', padding: 0 }}>
+            {/* Đã bỏ nút đóng ngoài, chỉ còn ChatSession */}
+            <ChatSession userId={user?.id || 'demo'} onLogout={() => setShowChat(false)} />
+          </div>
+        ) : (
+          <button onClick={() => setShowChat(true)} style={{ background: 'linear-gradient(90deg,#015aad,#00b74f)', color: '#fff', border: 'none', borderRadius: '50%', width: 56, height: 56, fontSize: 28, boxShadow: '0 2px 8px #0003', cursor: 'pointer' }}>
+            💬
+          </button>
+        )}
+      </div>
     </Box>
   );
 };

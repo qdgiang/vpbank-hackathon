@@ -21,8 +21,16 @@ const Login = () => {
     email: '',
     password: '',
   });
+  // Thêm state để xác định có phải bị redirect do chưa login không
+  const [authRequired, setAuthRequired] = useState(false);
 
   useEffect(() => {
+    // Nếu vừa vào trang login mà url là /login (không phải do user tự bấm), thì hiển thị thông báo
+    if (window.location.pathname === '/login' && !isAuthenticated) {
+      setAuthRequired(true);
+    } else {
+      setAuthRequired(false);
+    }
     if (isAuthenticated) {
       navigate('/dashboard');
     }
