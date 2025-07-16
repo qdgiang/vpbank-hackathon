@@ -139,7 +139,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'transaction_id': transaction_id,
                 'user_id': transaction_data.get('user_id'),
                 'msg_content': transaction_data.get('msg_content'),
-                'amount': transaction_data.get('amount')
+                'amount': transaction_data.get('amount'),
+                'txn_time': transaction_data.get('txn_time'),
+                'merchant': transaction_data.get('merchant'),
+                'to_account_name': transaction_data.get('to_account_name'),
+                'location': transaction_data.get('location'),
+                'channel': transaction_data.get('channel'),
+                'tranx_type': transaction_data.get('tranx_type')
             }
             ai_resp = lambda_client.invoke(
                 FunctionName=AI_CLASSIFY_LAMBDA,
