@@ -124,10 +124,14 @@ def preprocess_data(args):
     """
     # Read struct_df & filter transactions
     df = pd.read_csv(INPUT_PATH)
+    df = df[df["user_id"].notna()]
+    df = df[df["user_id"].str.lower() != 'nan']
     df = df[df['tranx_type'].isin({'transfer_out', 'qrcode_payment', 'atm_withdrawal'})]
-    cols_to_drop = ['tranx_type', 'txn_time', 'tranx_type_bill_payment', 'tranx_type_cashback',
+    cols_to_drop = ['msg_content', 'merchant', 'to_account_name', 'channel', 'location',
+                    'is_manual_override', 'created_at', 'updated_at', 'amount_log', 'hour','dayofweek',
+                    'tranx_type', 'txn_time', 'tranx_type_bill_payment', 'tranx_type_cashback',
                     'tranx_type_loan_repayment','tranx_type_mobile_topup','tranx_type_opensaving',
-                    'tranx_type_stock','tranx_type_transfer_in']
+                    'tranx_type_stock','tranx_type_transfer_in', 'text_joined']
     df = df.drop(cols_to_drop, axis=1)
 
     # Handle text embedding
@@ -136,12 +140,31 @@ def preprocess_data(args):
     df = pd.concat([df, embedding_df], axis=1)
     df.drop(columns=["sentence_embedding", "embedding_list"], inplace=True)
 
+    # Validate user_id
+    unique_ids = df["user_id"].unique()
+    unique_ids = (
+        pd.Series(unique_ids)  # chấp nhận cả list, np.ndarray
+        .dropna()  # loại float('nan')
+        .astype(str)  # ép về chuỗi
+        .loc[lambda s: s.str.lower() != "nan"]  # loại chuỗi 'nan'
+        .tolist()  # chuyển thành list
+    )
+    df = df[df['user_id'].isin(unique_ids)]
+
     # Merge with user_emb
-    unique_uids = df["user_id"].unique()
-    uid_to_vec = fetch_all_embeddings(unique_uids, max_workers=8, args=args)
+    uid_to_vec = fetch_all_embeddings(unique_ids, max_workers=8, args=args)
     user_embeddings = np.vstack(df["user_id"].map(uid_to_vec).to_list())
 
     # Get X and y
+    X_columns = df.drop(columns=["transaction_id", "category_label", "user_id"]).columns.tolist()
+    with open(os.path.join(OUTPUT_DIR, "cols_model.json"), "w") as f:
+        json.dump(X_columns, f)
+    bucket = args.bucket
+    key = f"classifier_output/{os.environ['TRAINING_JOB_NAME']}/output/metadata/cols_model.json"
+    s3 = boto3.client("s3")
+    s3.upload_file(os.path.join(OUTPUT_DIR, "cols_model.json"), bucket, key)
+    logger.info(f"✅ Uploaded list of columns to s3://{bucket}/{key}")
+
     X = np.hstack([
         df.drop(columns=["transaction_id", "category_label", "user_id"]).values,
         user_embeddings

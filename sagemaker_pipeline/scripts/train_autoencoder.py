@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 TRAIN_DIR = "/opt/ml/input/data/train"
 MODEL_DIR = "/opt/ml/model"
 OUTPUT_DIR = "/opt/ml/output"
-INPUT_STRUCT_PATH = os.path.join(TRAIN_DIR, "structured_features.csv")
-INPUT_TEXT_PATH = os.path.join(TRAIN_DIR, "text_features.csv")
+INPUT_PATH= os.path.join(TRAIN_DIR, "preprocessed_features.csv")
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -34,7 +33,7 @@ def parse_args():
     parser.add_argument("--test-split",    type=float, default=0.2)
     parser.add_argument("--rng-seed",      type=int,   default=42)
     parser.add_argument("--model_dir",     type=str,   default="/opt/ml/model")
-    parses.add_argument("--bucket",        type=str,   default="smart-jarvis-sagemaker")
+    parser.add_argument("--bucket",        type=str,   default="smart-jarvis-sagemaker")
     return parser.parse_args()
 
 
@@ -46,15 +45,15 @@ def get_user_sequences(input_path, args):
     df["embedding_list"] = df["sentence_embedding"].apply(json.loads)
     embedding_df = pd.DataFrame(df["embedding_list"].tolist())
     df = pd.concat([df, embedding_df], axis=1)
-    df.drop(columns=["sentence_embedding", "embedding_list"], inplace=True)
-
-    # Drop redundant columns
-    df.drop(columns=["category_label", "tranx_type"], inplace=True)
+    df.drop(columns=["sentence_embedding", "embedding_list", "text_joined"], inplace=True)
+    df.columns = df.columns.astype(str)
 
     # Group by user_id
     df = df.sort_values(["user_id", "txn_time"])
-
-    drop_cols    = {"transaction_id", "txn_time", "user_id"}
+    drop_cols = {"transaction_id", "txn_time", "user_id",
+                 "msg_content", "to_account_name", "merchant",
+                 "category_label", "tranx_type", "channel", "location",
+                 "is_manual_override", "created_at", "updated_at"}
     feature_cols = [c for c in df.columns if c not in drop_cols]
 
     scaler = StandardScaler()
@@ -62,9 +61,9 @@ def get_user_sequences(input_path, args):
 
     seqs = [
         group[feature_cols].to_numpy()[-args.max_seq_len:]
-        for _, group in merged.groupby("user_id", sort=False)
+        for _, group in df.groupby("user_id", sort=False)
     ]
-    user_ids = merged["user_id"].drop_duplicates().tolist()
+    user_ids = df["user_id"].drop_duplicates().tolist()
     seqs = pad_sequences(seqs, maxlen=args.max_seq_len,
                          dtype="float32", padding="pre", value=0.0)
     return seqs, user_ids, scaler, len(feature_cols)
@@ -129,7 +128,17 @@ if __name__ == '__main__':
     # Upload to S3
     bucket = args.bucket
     key    = f"features/user_embeddings.csv"
-
     s3 = boto3.client("s3")
     s3.upload_file(emb_path, bucket, key)
     logger.info(f"✅ Uploaded embeddings {df_emb.shape} to s3://{bucket}/{key}")
+
+    # Upload metadata
+    metadata = {
+        "n_rows": int(df_emb.shape[0]),
+        "n_cols": int(df_emb.shape[1]),
+        "columns": list(df_emb.columns),
+        "dtypes": {col: str(dtype) for col, dtype in df_emb.dtypes.items()},
+    }
+    meta_key = "features/user_embeddings.metadata.json"
+    buffer = BytesIO(json.dumps(metadata, ensure_ascii=False, indent=2).encode("utf-8"))
+    s3.upload_fileobj(buffer, bucket, meta_key)

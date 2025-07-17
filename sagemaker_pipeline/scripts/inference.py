@@ -3,7 +3,6 @@ import sys
 import os
 import pandas as pd
 import numpy as np
-import fasttext
 import re
 import tensorflow as tf
 import json
@@ -16,17 +15,14 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 # ------------- CONFIG ------------------------
-ID_COLS = ['transaction_id', 'user_id']
-STRUCTURED_COLS = ['amount', 'txn_time', 'tranx_type', 'channel', 'location']
-TEXT_COLS = ['msg_content', 'merchant', 'to_account_name']
-LABEL = 'category_label'
+SELECTED_FEATURES = ["amount", "amount_scaled", "day_of_month", "is_weekend", "hour_sin", "hour_cos", "dow_sin", "dow_cos", "tranx_type_atm_withdrawal", "tranx_type_qrcode_payment", "tranx_type_transfer_out", "channel_MOBILE", "channel_WEB", "location_idx", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383]
 
 FEATURE_GROUP_NAME = "user-embeddings"
 EMBED_DIM          = 64
 FEATURE_NAME       = "embedding"
 
-fs_runtime = boto3.client("sagemaker-featurestore-runtime",
-                          region_name="ap-southeast-2")
+sagemaker_client = boto3.client("sagemaker-runtime",
+                                region_name="ap-southeast-2")
 
 # ---------- HELPER FUNCTIONS -----------------
 _ARTIFACTS = {}
@@ -67,11 +63,10 @@ def _load_artifacts():
     return _ARTIFACTS
 
 
-def get_struct_features(features, artefacts):
+def _get_struct_features(features, artefacts):
     # Handle amount
     features['amount_log'] = np.log1p(features['amount'])
     features['amount_scaled'] = artefacts['scaler'].fit_transform(features[['amount_log']])
-    amount_features = ['amount_scaled']
 
     # Handle txn_time
     features['txn_time'] = pd.to_datetime(features['txn_time'])
@@ -83,7 +78,6 @@ def get_struct_features(features, artefacts):
     features['hour_cos'] = np.cos(2 * np.pi * features['hour'] / 24)
     features['dow_sin'] = np.sin(2 * np.pi * features['dayofweek'] / 7)
     features['dow_cos'] = np.cos(2 * np.pi * features['dayofweek'] / 7)
-    time_features = ['txn_time', 'day_of_month', 'hour_sin', 'hour_cos', 'dow_sin', 'dow_cos', 'is_weekend']
 
     # Handle categorical features: tranx_type, channel, location
     ohe = artefacts['ohe']
@@ -92,95 +86,74 @@ def get_struct_features(features, artefacts):
     ohe_feature_names = ohe.get_feature_names_out(oh_cols)
     df_cat_encoded = pd.DataFrame(X_cat, columns=ohe_feature_names, index=df.index)
     features = pd.concat([features, df_cat_encoded], axis=1)
-    oh_features = list(ohe_feature_names)
 
     le = artefacts['loc_enc']
     features['location_idx'] = le.fit_transform(features['location'])
-    lb_features = ['location_idx']
-
-    # Get final features dataframe
-    selected_features = amount_features + time_features + oh_features + lb_features
-    features = features[ID_COLS + FILTERED_COLS + selected_features].copy()
     return features
-
-def get_text_embeddings(df):
-    model_path = get_model_path(MODEL_S3_URI)
-    global emb_model, dim
-    emb_model = fasttext.load_model(str(model_path))
-    dim = moel.get_dimension()
-
-    concat_series = (
-        df[TEXT_COLS]  # 1️⃣ Lấy đúng các cột chứa văn bản
-        .fillna("")  # 2️⃣ Thay NaN bằng chuỗi rỗng để tránh lỗi khi ghép
-        .agg(" ".join, axis=1)  # 3️⃣ Ghép giá trị trên *một hàng* thành 1 chuỗi, ngăn cách bằng dấu cách
-        .astype(str)  # 4️⃣ Đảm bảo kiểu dữ liệu là string (đề phòng cột số)
-    )
-    embeddings = concat_series.apply(embed_sentence)
-    matrix = np.vstack(embeddings.values)
-    emb_df = pd.DataFrame(matrix)
-
-    emb_df['transaction_id'] = df['transaction_id']
-    emb_df['user_id'] = df['user_id']
-    emb_df['tranx_type'] = df['tranx_type']
-    emb_df['category_label'] = df['category_label']
-    logger.info(f' ✔ Feature engineering: text embedding features - {emb_df.shape}')
-    return emb_df
 
 
 # -------- INFERENCE FUNCTIONS ----------------
 def model_fn(model_dir):
-    model_path = os.path.join(model_dir, "model")
+    logger.info(">>> Inside model_fn")
+    model_path = os.path.join(model_dir, "1")
     model = tf.keras.models.load_model(model_path)
     return model
 
 def input_fn(request_body, request_content_type):
+    """
+    :param request_body:
+       {
+            "user_id": user_id,
+            "amount": amount,
+            "txn_time": txn_time,
+            "msg_content": msg_content,
+            "merchant": merchant,
+            "to_account_name": to_account_name,
+            "location": location,
+            "channel": channel,
+            "tranx_type": tranx_type,
+            "sentence_embedding": sentence_embedding
+        }
+    """
+    logger.info(">>> Inside input_fn")
     if request_content_type != "application/json":
         raise ValueError(f"Unsupported content type {request_content_type}")
 
-    if isinstance(request_body, (bytes, bytearray)):
-        request_body = request_body.decode("utf‑8")
-    data = json.loads(request_body)
+    data_dict = json.loads(request_body)
 
-    # Cho phép client gửi 1 dict hoặc list[dict]
-    if isinstance(data, dict):
-        records = [data]
+    # Handle sentence embedding
+    emb_raw = data_dict.pop("sentence_embedding")
+    if isinstance(emb_raw, str):
+        vec = np.fromstring(emb_raw, sep=",")
     else:
-        raise ValueError("Payload must be a JSON object or list of objects")
+        vec = np.array(emb_raw)
+    assert len(vec) == EMBED_DIM, f"Embedding must have {EMBED_DIM} dimensions"
 
-    # Data preprocess
-    features = pd.DataFrame(records)
-    features["amount"] = pd.to_numeric(features["amount"], errors="coerce")
-    features["txn_time"] = pd.to_datetime(features["txn_time"], errors="coerce", utc=True)
-    logger.info(features.dtypes)
-    artefacts = _load_artifacts()
+    # Concat dataframes
+    df_structured = pd.DataFrame([data_dict])
+    df_structured = _get_struct_features(df_structured)
+    emb_df = pd.DataFrame([vec], columns=list(range(EMBED_DIM)))
+    df_full = pd.concat([df_structured, emb_df], axis=1)
+    df_full = df_full[SELECTED_FEATURES + ['transaction_id', 'user_id']]
 
-    # Get structured and text features
-    struct_features = get_struct_features(features, artefacts)
-    text_features = get_text_embeddings(features)
-
-    cols_to_drop = ['tranx_type', 'txn_time', 'tranx_type_bill_payment', 'tranx_type_cashback',
-                    'tranx_type_loan_repayment', 'tranx_type_mobile_topup', 'tranx_type_opensaving',
-                    'tranx_type_stock', 'tranx_type_transfer_in']
-    df = struct_features.drop(cols_to_drop,axis=1)
-    text_features = text_features.drop(['user_id', 'tranx_type', 'category_label'], axis=1)
-    df = df.merge(text_features, how='inner', on='transaction_id')
-
-    # Get embeddings
+    # Get user embeddings
     user_embeddings = np.vstack(
-        df["user_id"].map(uid_to_vec).to_list()
+        df_full["user_id"].map(uid_to_vec).to_list()
     )
-    X_raw = df.drop(columns=["transaction_id", "category_label", "user_id"]).values
+    X_raw = df.drop(columns=["transaction_id", "user_id"]).values
     X = np.hstack([X_raw, user_embeddings])
     return X
 
 
 def predict_fn(input_data, model):
+    logger.info(">>> Inside predict_fn")
     prediction = model.predict(input_data)
     logger.info(f"Model output: {prediction}")
     return prediction
 
 
-def output_fn(prediction, content_type):
+def output_fn(prediction, response_content_type):
+    logger.info(">>> Inside output_fn")
     resp = json.dumps(prediction.tolist())
     logger.info(f"Response: {resp}")
     return resp
