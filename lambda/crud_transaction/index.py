@@ -179,13 +179,62 @@ def classify_transaction(event):
     if not user_exists(user_id):
         return response(404, {"error": "User not found"})
     conn = get_db_connection()
+    y_month = None
+    tranx_type = None
     try:
         with conn:
             with conn.cursor() as cursor:
-                cursor.execute("SELECT 1 FROM transactions WHERE transaction_id = %s AND user_id = %s", (transaction_id, user_id))
-                exists = cursor.fetchone()
-                if not exists:
+                cursor.execute("SELECT * FROM transactions WHERE transaction_id = %s AND user_id = %s", (transaction_id, user_id))
+                tx = cursor.fetchone()
+                if not tx:
                     return response(404, {"error": "Transaction not found"})
+                old_label = tx.get('category_label')
+                amount = tx['amount']
+                tranx_type = tx['tranx_type']
+                y_month = tx['txn_time'].strftime('%Y-%m') if tx and 'txn_time' in tx and tx['txn_time'] else None
+                # Nếu label cũ khác label mới, update cả 2 jar
+                if old_label and old_label != category_label:
+                    # Trừ spent jar cũ
+                    try:
+                        jar_payload_old = {
+                            "user_id": user_id,
+                            "amount": -float(amount),
+                            "tranx_type": tranx_type,
+                            "category_label": old_label,
+                            "y_month": y_month
+                        }
+                        LAMBDA_CLIENT.invoke(
+                            FunctionName=os.environ.get('JAR_UPDATE_LAMBDA', 'smart-jarvis-crud-jar'),
+                            InvocationType='Event',
+                            Payload=json.dumps({
+                                "path": "/jar/update_budget",
+                                "httpMethod": "POST",
+                                "body": json.dumps(jar_payload_old)
+                            })
+                        )
+                    except Exception as e:
+                        logger.error(f"Error calling jar update lambda (old): {str(e)}")
+                # Cộng spent jar mới
+                try:
+                    jar_payload_new = {
+                        "user_id": user_id,
+                        "amount": float(amount),
+                        "tranx_type": tranx_type,
+                        "category_label": category_label,
+                        "y_month": y_month
+                    }
+                    LAMBDA_CLIENT.invoke(
+                        FunctionName=os.environ.get('JAR_UPDATE_LAMBDA', 'smart-jarvis-crud-jar'),
+                        InvocationType='Event',
+                        Payload=json.dumps({
+                            "path": "/jar/update_budget",
+                            "httpMethod": "POST",
+                            "body": json.dumps(jar_payload_new)
+                        })
+                    )
+                except Exception as e:
+                    logger.error(f"Error calling jar update lambda (new): {str(e)}")
+                # Update transaction
                 cursor.execute("""
                     UPDATE transactions SET category_label = %s, updated_at = NOW()
                     WHERE transaction_id = %s AND user_id = %s
@@ -194,4 +243,4 @@ def classify_transaction(event):
     except Exception as e:
         logger.error(f"DB error: {str(e)}")
         return response(500, {"error": f"DB error: {str(e)}"})
-    return response(200, {"message": "Transaction classified"})
+    return response(200, {"message": "Transaction classified", "y_month": y_month, "tranx_type": tranx_type})

@@ -1,12 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { fetchJars, fetchJar, createJar, updateJar, deleteJar } from '../services/api';
+import { fetchJars, createJar, updateJar, deleteJar } from '../services/api';
 
 export const fetchJarsData = createAsyncThunk(
   'jars/fetchJars',
   async (_, { rejectWithValue }) => {
     try {
       const response = await fetchJars();
-      return response.data;
+      console.log(response.data.jars)
+      return response.data.jars;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -27,9 +28,9 @@ export const createJarData = createAsyncThunk(
 
 export const updateJarData = createAsyncThunk(
   'jars/updateJar',
-  async ({ id, data }, { rejectWithValue }) => {
+  async (data, { rejectWithValue }) => {
     try {
-      const response = await updateJar(id, data);
+      const response = await updateJar(data);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);

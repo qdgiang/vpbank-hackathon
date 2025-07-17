@@ -43,6 +43,8 @@ const GoalSettings = () => {
 
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [aiGoalResult, setAiGoalResult] = useState(null);
+  const [aiGoalDialogOpen, setAiGoalDialogOpen] = useState(false);
 
   const handleAddGoal = () => {
     setEditingGoal(null);
@@ -397,6 +399,80 @@ const GoalSettings = () => {
           </DialogActions>
         </Dialog>
       </CardContent>
+      <Box display="flex" justifyContent="flex-end" sx={{ px: 2, pb: 2 }}>
+        <Button
+          variant="outlined"
+          color="secondary"
+          onClick={async () => {
+            try {
+              const token = localStorage.getItem('token');
+              const res = await fetch('/api/v1/ai/goal/coaching', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token ? { Authorization: `Bearer ${token}` } : {})
+                }
+              });
+              const data = await res.json();
+              setAiGoalResult(data);
+              setAiGoalDialogOpen(true);
+            } catch (err) {
+              setAiGoalResult({ error: 'AI Goal Coaching call failed' });
+              setAiGoalDialogOpen(true);
+            }
+          }}
+        >
+          Demo AI Goal Coaching
+        </Button>
+      </Box>
+      <Dialog open={aiGoalDialogOpen} onClose={() => setAiGoalDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>AI Goal Coaching Result</DialogTitle>
+        <DialogContent>
+          {aiGoalResult ? (
+            <>
+              {aiGoalResult.message && (
+                <Typography variant="subtitle2" color="primary" mb={2}>
+                  {aiGoalResult.message}
+                </Typography>
+              )}
+              {aiGoalResult.financial_advice && aiGoalResult.financial_advice.advice && (
+                <Box mb={2}>
+                  <Typography variant="h6" color="success.main" fontWeight="bold">
+                    {aiGoalResult.financial_advice.advice}
+                  </Typography>
+                </Box>
+              )}
+              {aiGoalResult.goal_analysis && aiGoalResult.goal_analysis.length > 0 && (
+                <Box mb={2}>
+                  <Typography variant="subtitle1" fontWeight="bold" mb={1}>Goal Analysis:</Typography>
+                  {aiGoalResult.goal_analysis.map((goal, idx) => (
+                    <Box key={idx} mb={2} p={2} sx={{ border: '1px solid #eee', borderRadius: 2, background: '#fafbfc' }}>
+                      {/* Render các trường của goal, ví dụ: */}
+                      <Typography variant="subtitle2" fontWeight="bold">{goal.name}</Typography>
+                      <Typography variant="body2">Progress: {goal.progress}%</Typography>
+                      {/* ... các trường khác nếu có ... */}
+                    </Box>
+                  ))}
+                </Box>
+              )}
+              {aiGoalResult.financial_advice && aiGoalResult.financial_advice.retrieved_references && aiGoalResult.financial_advice.retrieved_references.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" fontWeight="bold" mb={1}>References:</Typography>
+                  <ul>
+                    {aiGoalResult.financial_advice.retrieved_references.map((ref, idx) => (
+                      <li key={idx}>
+                        <Typography variant="body2">{ref}</Typography>
+                      </li>
+                    ))}
+                  </ul>
+                </Box>
+              )}
+            </>
+          ) : (
+            <Typography color="text.secondary">No coaching data.</Typography>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

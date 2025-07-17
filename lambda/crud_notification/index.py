@@ -113,8 +113,8 @@ def create_notification(event):
         with conn.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO notifications (
-                    notification_id, user_id, title, message, notification_type, severity, object_code, object_id, status, created_at, updated_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+                    notification_id, user_id, title, message, notification_type, severity, object_code, object_id, status, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
             """, (
                 notification_id,
                 user_id,
@@ -144,7 +144,7 @@ def mark_notification_status(event):
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                UPDATE notifications SET status = %s, updated_at = NOW()
+                UPDATE notifications SET status = %s
                 WHERE notification_id = %s AND user_id = %s
             """, (status, notification_id, user_id))
         conn.commit()

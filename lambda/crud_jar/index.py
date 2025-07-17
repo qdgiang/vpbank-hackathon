@@ -49,6 +49,8 @@ def handler(event, context):
             return update_jar_percent(event)
         elif path.startswith("/jar/") and method == "GET":
             return get_jar_list(event)
+        elif path == "/jar/update_budget" and method == "POST":
+            return update_jar_amount(event)
         else:
             return response(404, {"error": "Not Found"})
     except Exception as e:
@@ -219,6 +221,7 @@ def update_jar_percent(event):
     from datetime import datetime
     y_month = datetime.now().strftime('%Y-%m')
     jars = body['jars']
+    income = body.get('income')
     if not isinstance(jars, list):
         return response(400, {"error": "jars must be an array"})
     if len(jars) != 6:
@@ -254,17 +257,26 @@ def update_jar_percent(event):
                     """, (user_id, y_month, jar_code))
                     exists = cursor.fetchone()['count'] > 0
                     if exists:
-                        cursor.execute("""
-                            UPDATE user_jar_spending 
-                            SET percent = %s, updated_at = NOW()
-                            WHERE user_id = %s AND y_month = %s AND jar_code = %s
-                        """, (percent, user_id, y_month, jar_code))
+                        if income is not None:
+                            virtual_budget_amount = float(income) * percent / 100
+                            cursor.execute("""
+                                UPDATE user_jar_spending 
+                                SET percent = %s, virtual_budget_amount = %s, updated_at = NOW()
+                                WHERE user_id = %s AND y_month = %s AND jar_code = %s
+                            """, (percent, virtual_budget_amount, user_id, y_month, jar_code))
+                        else:
+                            cursor.execute("""
+                                UPDATE user_jar_spending 
+                                SET percent = %s, updated_at = NOW()
+                                WHERE user_id = %s AND y_month = %s AND jar_code = %s
+                            """, (percent, user_id, y_month, jar_code))
                     else:
+                        vba = float(income) * percent / 100 if income is not None else 0
                         cursor.execute("""
                             INSERT INTO user_jar_spending (
                                 user_id, y_month, jar_code, percent, virtual_budget_amount, spent_amount, income_type, created_at, updated_at
                             ) VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
-                        """, (user_id, y_month, jar_code, percent, 0, 0, 0))
+                        """, (user_id, y_month, jar_code, percent, vba, 0, 0))
                     updated_jars.append({"jar_code": jar_code, "percent": percent})
             conn.commit()
     except Exception as e:
@@ -272,7 +284,8 @@ def update_jar_percent(event):
     return response(200, {
         "message": "Jar percentages updated successfully",
         "updated_jars": updated_jars,
-        "total_percent": total_percent
+        "total_percent": total_percent,
+        "income": income
     })
 
 def update_jar_amount(event):
@@ -280,16 +293,27 @@ def update_jar_amount(event):
     Update spent_amount for the correct jar after transaction classification.
     Expects: user_id, amount, tranx_type, category_label (all required)
     """
-    user_id = event.get('user_id')
-    amount = event.get('amount')
-    tranx_type = event.get('tranx_type')
-    category_label = event.get('category_label')
+    body = json.loads(event.get('body', '{}'))
+    missing_fields = []
+    user_id = body.get('user_id')
+    if not user_id:
+        missing_fields.append('user_id')
+    amount = body.get('amount')
+    if amount is None:
+        missing_fields.append('amount')
+    tranx_type = body.get('tranx_type')
+    if not tranx_type:
+        missing_fields.append('tranx_type')
+    category_label = body.get('category_label')
+    if not category_label:
+        missing_fields.append('category_label')
     from datetime import datetime
-    y_month = datetime.now().strftime('%Y-%m')
-    if not user_id or amount is None or not tranx_type or not category_label:
-        return response(400, {"error": "user_id, amount, tranx_type, category_label are required"})
+    y_month = body.get('y_month') or datetime.now().strftime('%Y-%m')
+    if missing_fields:
+        logger.error(f"Missing required fields in update_jar_amount: {missing_fields}. Body: {body}")
+        return response(400, {"error": f"Missing required fields: {', '.join(missing_fields)}", "body": body})
     if not user_exists(user_id):
-        return response(404, {"error": "User not found"})
+        return response(404, {"error": "User not found", "user_id": user_id})
     # Map category_label to jar_code (default: category_label == jar_code, else NEC)
     jar_code = category_label.upper() if category_label.upper() in ['NEC','FFA','LTSS','EDU','PLY','GIV'] else 'NEC'
     # Only skip update for transfer_in, cashback, refund

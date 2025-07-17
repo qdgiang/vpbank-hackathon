@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Card, CardContent, Typography, Box, TextField, MenuItem, Select, InputLabel, FormControl, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Pagination
+  Card, CardContent, Typography, Box, TextField, MenuItem, Select, InputLabel, FormControl, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Pagination, CircularProgress, Dialog, DialogTitle, DialogContent
 } from '@mui/material';
-import SaveIcon from '@mui/icons-material/Save';
-import CancelIcon from '@mui/icons-material/Cancel';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -11,15 +9,16 @@ dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchTransactionsData, createTransactionData, updateTransactionData, deleteTransactionData } from '../store/transactionsSlice';
+import { fetchJarsData } from '../store/jarsSlice';
+import Snackbar from '@mui/material/Snackbar';
 
 const ROW_OPTIONS = [10, 20, 50];
 
 const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
   const dispatch = useDispatch();
-  const { transactions, loading } = useSelector(state => state.transactions);
-  useEffect(() => {
-    dispatch(fetchTransactionsData());
-  }, [dispatch]);
+  const { transactions, loading, total } = useSelector(state => state.transactions);
+  // Ensure transactions is always an array
+  const safeTransactions = Array.isArray(transactions) ? transactions : (transactions?.transactions || []);
   const [filterText, setFilterText] = useState('');
   const [filterFrom, setFilterFrom] = useState('');
   const [filterTo, setFilterTo] = useState('');
@@ -28,43 +27,35 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
   // Track edited jars: { idx: newJar }
   const [editedJars, setEditedJars] = useState({});
   const [saving, setSaving] = useState(false);
+  // State for transaction creation dialog
+  const [openTxForm, setOpenTxForm] = useState(false);
+  const [txForm, setTxForm] = useState({
+    amount: '',
+    txn_time: '',
+    msg_content: '',
+    merchant: '',
+    location: '',
+    channel: '',
+    tranx_type: 'transfer_out',
+  });
+  const [formError, setFormError] = useState('');
+  const [openSnackbar, setOpenSnackbar] = useState(false);
 
-  // Filtered transactions
-  const filtered = useMemo(() => {
-    return transactions.filter(tx => {
-      const matchText =
-        filterText === '' ||
-        (tx.msg_content || '').toLowerCase().includes(filterText.toLowerCase());
-      const matchFrom =
-        !filterFrom || dayjs(tx.txn_time).isSameOrAfter(dayjs(filterFrom), 'day');
-      const matchTo =
-        !filterTo || dayjs(tx.txn_time).isSameOrBefore(dayjs(filterTo), 'day');
-      return matchText && matchFrom && matchTo;
-    });
-  }, [transactions, filterText, filterFrom, filterTo]);
+  useEffect(() => {
+    dispatch(fetchTransactionsData({
+      pagination: { page_size: rowsPerPage, current: page },
+      filters: {
+        ...(filterText ? { search_text: filterText } : {}),
+        ...(filterFrom ? { from_date: filterFrom } : {}),
+        ...(filterTo ? { to_date: filterTo } : {})
+      }
+    }));
+  }, [dispatch, page, rowsPerPage, filterText, filterFrom, filterTo]);
 
-  // Paging
-  const pageCount = Math.ceil(filtered.length / rowsPerPage) || 1;
-  const paged = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
-
-  // Check if there are edits
-  const hasEdits = Object.keys(editedJars).length > 0;
+  const pageCount = Math.ceil(total / rowsPerPage) || 1;
 
   const handleJarChange = (idx, newJar) => {
     setEditedJars(prev => ({ ...prev, [idx]: newJar }));
-  };
-
-  const handleSave = () => {
-    setSaving(true);
-    Object.entries(editedJars).forEach(([idx, newJar]) => {
-      dispatch(updateTransactionData({ id: transactions[Number(idx)].id, data: { jar: newJar } }));
-    });
-    setEditedJars({});
-    setTimeout(() => setSaving(false), 500); // Simulate save
-  };
-
-  const handleCancel = () => {
-    setEditedJars({});
   };
 
   const handlePageChange = (_, value) => setPage(value);
@@ -74,18 +65,11 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
     setPage(1);
   };
 
-  // Replace add/edit/delete handlers:
-  const handleAddTransaction = (tx) => {
-    dispatch(createTransactionData(tx));
-  };
-  const handleEditTransaction = (id, data) => {
-    dispatch(updateTransactionData({ id, data }));
-  };
-  const handleDeleteTransaction = (id) => {
-    dispatch(deleteTransactionData(id));
+  const handleTxFormChange = (e) => {
+    setTxForm({ ...txForm, [e.target.name]: e.target.value });
   };
 
-  // Các loại là thu (+)
+  // Income types (+)
   const IN_TYPES = [
     'transfer_in',
     'cashback',
@@ -94,7 +78,7 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
     'opendeposit',
     'openaccumulation'
   ];
-  // Các loại là chi (-)
+  // Expense types (-)
   const OUT_TYPES = [
     'transfer_out',
     'qrcode_payment',
@@ -111,18 +95,13 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
     return 0;
   }
 
-  // Map code category_label sang tên đầy đủ
-  const CATEGORY_MAP = {
-    'NEC': 'Necessities',
-    'FFA': 'Financial Freedom',
-    'EDU': 'Education',
-    'LTSS': 'Long-term Savings',
-    'PLY': 'Play',
-    'GIV': 'Give'
-  };
-
   return (
-    <Card sx={{ borderRadius: 4, boxShadow: '0 2px 12px #0001', mb: 3, mt: 3 }}>
+    <Card sx={{ borderRadius: 4, boxShadow: '0 2px 12px #0001', mb: 3, mt: 3, position: 'relative' }}>
+      {loading && (
+        <Box position="absolute" top={0} left={0} width="100%" height="100%" zIndex={10} display="flex" alignItems="center" justifyContent="center" bgcolor="rgba(255,255,255,0.6)">
+          <CircularProgress />
+        </Box>
+      )}
       <CardContent>
         <Box display="flex" alignItems="center" gap={2} mb={2} flexWrap="wrap">
           <Typography
@@ -175,19 +154,18 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
                 <TableCell>Jar Type</TableCell>
                 <TableCell>Recipient/Sender</TableCell>
                 <TableCell>Location</TableCell>
-                {/* <TableCell>Channel</TableCell> */}
-                {/* <TableCell>Transaction Type</TableCell> */}
                 <TableCell>Note</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {paged.length === 0 ? (
+              {safeTransactions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} align="center">No transactions found.</TableCell>
                 </TableRow>
               ) : (
-                paged.map((tx, idx) => {
-                  const globalIdx = (page - 1) * rowsPerPage + idx;
+                safeTransactions.map((tx, idx) => {
+                  const globalIdx = idx;
+                  const isExpense = OUT_TYPES.includes(tx.tranx_type);
                   return (
                     <TableRow key={globalIdx} hover>
                       <TableCell>{dayjs(tx.txn_time).format('YYYY-MM-DD')}</TableCell>
@@ -197,22 +175,43 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
                         {Math.abs(Number(tx.amount)).toLocaleString('vi-VN')}
                       </TableCell>
                       <TableCell>
-                        <FormControl size="small" fullWidth>
-                          <Select
-                            value={editedJars[globalIdx] || tx.category_label || classifyTransaction(tx)}
-                            onChange={e => handleJarChange(globalIdx, e.target.value)}
-                          >
-                            {jarList.map(jar => (
-                              <MenuItem key={jar.key} value={jar.key}>{jar.name}</MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
+                        {isExpense && (
+                          <FormControl size="small" fullWidth>
+                            <Select
+                              value={editedJars[globalIdx] || tx.category_label || classifyTransaction(tx)}
+                              onChange={e => handleJarChange(globalIdx, e.target.value)}
+                             variant={'outlined'}>
+                              {jarList.map(jar => (
+                                <MenuItem key={jar.key} value={jar.key}>{jar.name}</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        )}
                       </TableCell>
                       <TableCell>{tx.to_account_name}</TableCell>
                       <TableCell>{tx.location}</TableCell>
-                      {/* <TableCell>{tx.channel}</TableCell> */}
-                      {/* <TableCell>{tx.tranx_type}</TableCell> */}
                       <TableCell>{tx.merchant}</TableCell>
+                      <TableCell>
+                        {isExpense && (
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            size="small"
+                            disabled={editedJars[globalIdx] === undefined || editedJars[globalIdx] === (tx.category_label || classifyTransaction(tx))}
+                            onClick={async () => {
+                              if (tx && tx.transaction_id && editedJars[globalIdx] !== undefined) {
+                                await dispatch(updateTransactionData({ transactionId: tx.transaction_id, data: { jar: editedJars[globalIdx] } }));
+                                await dispatch(fetchTransactionsData());
+                                dispatch(fetchJarsData());
+                                setEditedJars(prev => ({ ...prev, [globalIdx]: undefined }));
+                              }
+                            }}
+                            sx={{ minWidth: 0, px: 1, mr: 1 }}
+                          >
+                            Save
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })
@@ -221,35 +220,17 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
           </Table>
         </TableContainer>
         <Box display="flex" alignItems="center" justifyContent="space-between" mt={2} gap={2} flexWrap="wrap">
-          <Box display="flex" alignItems="center" gap={1}>
-            {hasEdits && (
-              <>
-                <Button
-                  variant="contained"
-                  color="success"
-                  startIcon={<SaveIcon />}
-                  onClick={handleSave}
-                  disabled={saving}
-                  sx={{ minWidth: 100, fontWeight: 'bold' }}
-                >
-                  Save
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="inherit"
-                  startIcon={<CancelIcon />}
-                  onClick={handleCancel}
-                  disabled={saving}
-                  sx={{ minWidth: 100, fontWeight: 'bold' }}
-                >
-                  Cancel
-                </Button>
-              </>
-            )}
-          </Box>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => setOpenTxForm(true)}
+            >
+              + Add transaction
+            </Button>
           <Box display="flex" alignItems="center" gap={2}>
             <FormControl size="small" sx={{ minWidth: 80 }}>
               <Select
+                  variant={'outlined'}
                 value={rowsPerPage}
                 onChange={handleRowsPerPageChange}
               >
@@ -269,6 +250,109 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
           </Box>
         </Box>
       </CardContent>
+      <Dialog open={openTxForm} onClose={() => setOpenTxForm(false)}>
+        <DialogTitle>Add new transaction</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} mt={1} minWidth={350}>
+            {formError && (
+              <Typography color="error" variant="body2">{formError}</Typography>
+            )}
+            <TextField label="Amount" name="amount" value={txForm.amount} onChange={handleTxFormChange} type="number" fullWidth />
+            <TextField label="Time" name="txn_time" value={txForm.txn_time} onChange={handleTxFormChange} type="datetime-local" InputLabelProps={{ shrink: true }} fullWidth />
+            <TextField label="Content" name="msg_content" value={txForm.msg_content} onChange={handleTxFormChange} fullWidth />
+            <TextField label="Merchant" name="merchant" value={txForm.merchant} onChange={handleTxFormChange} fullWidth />
+            <TextField label="Location" name="location" value={txForm.location} onChange={handleTxFormChange} fullWidth />
+            <TextField label="Channel" name="channel" value={txForm.channel} onChange={handleTxFormChange} fullWidth />
+            <TextField label="Recipient/Sender" name="to_account_name" value={txForm.to_account_name || ''} onChange={handleTxFormChange} fullWidth />
+            <FormControl fullWidth>
+              <InputLabel id="tranx-type-label">Transaction type</InputLabel>
+              <Select
+                  variant={'outlined'}
+                labelId="tranx-type-label"
+                name="tranx_type"
+                value={txForm.tranx_type}
+                label="Transaction type"
+                onChange={handleTxFormChange}
+              >
+                <MenuItem value="transfer_in">transfer_in</MenuItem>
+                <MenuItem value="transfer_out">transfer_out</MenuItem>
+                <MenuItem value="qrcode_payment">qrcode_payment</MenuItem>
+                <MenuItem value="atm_withdrawal">atm_withdrawal</MenuItem>
+                <MenuItem value="service_fee">service_fee</MenuItem>
+                <MenuItem value="loan_repayment">loan_repayment</MenuItem>
+                <MenuItem value="stock">stock</MenuItem>
+                <MenuItem value="bill_payment">bill_payment</MenuItem>
+                <MenuItem value="opensaving">opensaving</MenuItem>
+                <MenuItem value="opendeposit">opendeposit</MenuItem>
+                <MenuItem value="openaccumulation">openaccumulation</MenuItem>
+                <MenuItem value="mobile_topup">mobile_topup</MenuItem>
+                <MenuItem value="cashback">cashback</MenuItem>
+                <MenuItem value="refund">refund</MenuItem>
+              </Select>
+            </FormControl>
+            <Button
+              variant="contained"
+              onClick={() => {
+                // Validate form fields
+                if (!txForm.amount || Number(txForm.amount) <= 0) {
+                  setFormError('Amount must be greater than 0');
+                  return;
+                }
+                if (!txForm.txn_time) {
+                  setFormError('Please select transaction time');
+                  return;
+                }
+                if (!txForm.msg_content) {
+                  setFormError('Please enter transaction content');
+                  return;
+                }
+                if (!txForm.merchant) {
+                  setFormError('Please enter merchant');
+                  return;
+                }
+                if (!txForm.location) {
+                  setFormError('Please enter location');
+                  return;
+                }
+                if (!txForm.channel) {
+                  setFormError('Please enter transaction channel');
+                  return;
+                }
+                if (!txForm.tranx_type) {
+                  setFormError('Please select transaction type');
+                  return;
+                }
+                setFormError('');
+                dispatch(createTransactionData({
+                  ...txForm,
+                  user_id: "000b1dd0-c880-45fd-8515-48dd705a3aa2"
+                }));
+                setOpenTxForm(false);
+                setTxForm({
+                  amount: '',
+                  txn_time: '',
+                  msg_content: '',
+                  merchant: '',
+                  location: '',
+                  channel: '',
+                  tranx_type: 'transfer_out',
+                });
+                setOpenSnackbar(true);
+              }}
+              sx={{ mt: 1 }}
+            >
+              Create transaction
+            </Button>
+          </Box>
+        </DialogContent>
+      </Dialog>
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setOpenSnackbar(false)}
+        message="Transaction is being processed"
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      />
     </Card>
   );
 };

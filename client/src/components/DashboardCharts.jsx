@@ -37,10 +37,16 @@ const DashboardCharts = ({ jars, transactions = [] }) => {
     { date: '2024-01-30', amount: -700000, category: 'Financial Freedom' },
   ];
 
+  // Giả sử bạn nhận được props hoặc lấy từ Redux:
+  // const jars = useSelector(state => state.jars.jars) || [];
+  // hoặc nhận từ props: const { jars = [] } = props;
+
+  // Ví dụ lấy dữ liệu cho chart:
   const chartData = jars.map(jar => ({
-    category: jar.name,
-    value: jar.currentBalance || Math.random() * 10000000,
-    color: jar.color || am5.color('#4ECDC4')
+    name: jar.jar_code, // hoặc getJarName(jar.jar_code)
+    budget: Number(jar.virtual_budget_amount),
+    spent: Number(jar.spent_amount),
+    remaining: Number(jar.remaining_budget),
   }));
 
   const expenseData = sampleTransactions

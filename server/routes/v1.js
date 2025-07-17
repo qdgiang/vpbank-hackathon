@@ -69,7 +69,6 @@ router.post('/notification/search', async (req, res) => {
     res.json(result);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
-// CHUẨN HÓA: Tạo notification mới
 router.post('/notification', async (req, res) => {
   try {
     const user_id = req.user.user_id;
@@ -81,7 +80,7 @@ router.post('/notification', async (req, res) => {
 router.patch('/notification/:id/status', async (req, res) => {
   try {
     const user_id = req.user.user_id;
-    const { status } = req.body;
+    const { status=1 } = req.body;
     const { id } = req.params;
     const result = await apigw.notificationMarkRead({ user_id, id, status });
     res.json(result);
@@ -115,23 +114,22 @@ router.post('/transaction', async (req, res) => {
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-router.patch('/transaction/:id/classify', async (req, res) => {
+router.put('/transaction/:id', async (req, res) => {
   try {
     const user_id = req.user.user_id;
-    const { category_label } = req.body;
+    const { jar } = req.body;
     const { id } = req.params;
-    const result = await apigw.transactionClassify({ user_id, id, category_label });
+    const result = await apigw.transactionClassify({ user_id, id, category_label: jar });
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ========== JAR ==========
-router.get('/jar/:id', async (req, res) => {
+router.get('/jar', async (req, res) => {
   try {
     const user_id = req.user.user_id;
     const { year_month } = req.query;
-    const { id } = req.params;
-    const result = await apigw.jarGet({ user_id, id, year_month });
+    const result = await apigw.jarGet({ user_id, year_month });
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -146,8 +144,8 @@ router.post('/jar/initialize', async (req, res) => {
 router.put('/jar/percent', async (req, res) => {
   try {
     const user_id = req.user.user_id;
-    const { year_month, jars } = req.body;
-    const result = await apigw.jarUpdatePercent({ user_id, year_month, jars });
+    const { jars, income } = req.body;
+    const result = await apigw.jarUpdatePercent({ user_id, jars, income });
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

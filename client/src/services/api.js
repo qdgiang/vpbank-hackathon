@@ -2,7 +2,7 @@ import axios from 'axios';
 import apiConfig from './api.config';
 
 const api = axios.create({
-  baseURL: process.env.VITE_API_URL ? `${process.env.VITE_API_URL}${apiConfig.baseURL}` : apiConfig.baseURL,
+  baseURL: apiConfig.baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -24,7 +24,7 @@ export const updateUser = async (id, data) => api.put(`${apiConfig.users}/${id}`
 export const deleteUser = async (id) => api.delete(`${apiConfig.users}/${id}`);
 
 // Transactions
-export const fetchTransactions = async () => api.post(`${apiConfig.transactions}/search`);
+export const fetchTransactions = async (params = {}) => api.post(`${apiConfig.transactions}/search`, params);
 export const fetchTransaction = async (id) => api.get(`${apiConfig.transactions}/${id}`);
 export const createTransaction = async (data) => api.post(apiConfig.transactions, data);
 export const updateTransaction = async (id, data) => api.put(`${apiConfig.transactions}/${id}`, data);
@@ -46,9 +46,8 @@ export const deleteGoal = async (id) => api.delete(`${apiConfig.goals}/${id}`);
 
 // Jars
 export const fetchJars = async () => api.get(apiConfig.jars);
-export const fetchJar = async (id) => api.get(`${apiConfig.jars}/${id}`);
 export const createJar = async (data) => api.post(apiConfig.jars, data);
-export const updateJar = async (id, data) => api.put(`${apiConfig.jars}/${id}`, data);
+export const updateJar = async (data) => api.put(`${apiConfig.jars}/percent`, data);
 export const deleteJar = async (id) => api.delete(`${apiConfig.jars}/${id}`);
 
 // Auth
