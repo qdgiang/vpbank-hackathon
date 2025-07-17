@@ -80,7 +80,7 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
         body = json.loads(event.get('body', '{}'))
         user_id = body.get('user_id')
         prompt = body.get('prompt')
-        chat_history = body.get('history ', [])
+        chat_history = body.get('history', [])
 
         if not user_id or not prompt:
             return {'statusCode': 400, 'body': json.dumps({'error': 'user_id and prompt are required.'})}
@@ -235,6 +235,8 @@ def handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
         
 #         resp = handler(test_event, None)
 #         body = json.loads(resp.get('body', '{}'))
+#         with open("response.json", "w", encoding="utf-8") as f:
+#             json.dump(body, f, ensure_ascii=False, indent=2)
 #         history.append(body)
 #         answer = body.get('answer', '')
 #         # used_tools = body.get('used_tools', [])
