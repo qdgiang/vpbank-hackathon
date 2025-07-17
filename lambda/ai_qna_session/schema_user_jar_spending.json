@@ -13,7 +13,7 @@
     "last_spending_date": "TIMESTAMP WITH TIME ZONE – The last time funds were withdrawn from this jar.",
     "created_at": "TIMESTAMP WITH TIME ZONE – When this record was first created.",
     "updated_at": "TIMESTAMP WITH TIME ZONE – When this record was last updated.",
-    "income_type": "TINYINT – The source of the last income allocation. Valid values: 0 = reset, 1 = carry-over (remaining from previous month), 2 = salary, 3 = bonus, etc."
+    "income_type": "TINYINT – The source of the last income allocation. Valid values: 0 = reset, 1 = carry-over (remaining from previous month)"
   },
   "primary_key": [
     "user_id",
