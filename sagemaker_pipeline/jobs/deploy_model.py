@@ -35,10 +35,10 @@ def main():
     model = TensorFlowModel(
         model_data=S3_MODEL_PATH,
         role=SAGEMAKER_ROLE,
-        entry_point="inference.py",
-        source_dir="scripts",
         framework_version="2.14",
-        sagemaker_session=sagemaker_session
+        sagemaker_session=sagemaker_session,
+        entry_point='inference.py',
+        source_dir='scripts'
     )
     logger.info('✅ Loaded model & inference')
 

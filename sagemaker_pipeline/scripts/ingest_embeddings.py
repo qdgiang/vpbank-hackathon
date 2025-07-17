@@ -1,4 +1,5 @@
 import argparse, json, os, pandas as pd, boto3
+import logging
 from datetime import datetime, timezone
 from sagemaker.feature_store.feature_group import FeatureGroup
 from sagemaker import Session

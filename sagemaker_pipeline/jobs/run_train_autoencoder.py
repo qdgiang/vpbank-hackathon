@@ -18,13 +18,14 @@ SAGEMAKER_INSTANCE = os.getenv("SAGEMAKER_JOB_INSTANCE")
 SAGEMAKER_GPU_INSTANCE = os.getenv("SAGEMAKER_JOB_GPU_INSTANCE")
 
 BUCKET = os.getenv("S3_BUCKET")
-S3_INPUT_URI = f"s3://{BUCKET}/preprocessed/"
-S3_OUTPUT_URI = f"s3://{BUCKET}/autoencoder_output/"
+S3_INPUT_URI = f"s3://{BUCKET}/{os.getenv('S3_FEATURES_KEY')}"
+S3_OUTPUT_URI = f"s3://{BUCKET}/{os.getenv('S3_MODELS_KEY')}"
 
 EMB_LOCAL_DIR = "/opt/ml/processing/input"
 EMB_LOCAL_PATH = "/opt/ml/processing/input/user_embeddings.csv"
 
 def main():
+
     # Create session
     boto_session = boto3.Session(
         profile_name=AWS_PROFILE,
@@ -32,7 +33,7 @@ def main():
     )
     sagemaker_session = Session(boto_session=boto_session)
     logger.info('Created SageMaker Session')
-
+    """
     # Create Estimator
     keras_estimator = TensorFlow(
         entry_point       = "train_autoencoder.py",
@@ -62,7 +63,7 @@ def main():
             s3_data=S3_INPUT_URI, content_type="text/csv")}
     )
     logger.info('Trained Keras Estimator')
-
+    """
     # Get URI of user_embeddings
     emb_s3_uri = f"s3://{BUCKET}/features/user_embeddings.csv"
     logger.info(f"Embeddings @{emb_s3_uri}")
