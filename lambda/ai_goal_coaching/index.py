@@ -55,7 +55,7 @@ def get_db_connection():
 
 def get_active_goals(cursor, user_id):
     """Fetches active savings goals for a given user from the database."""
-    query = "SELECT * FROM saving_goals WHERE user_id = %s AND is_active = TRUE"
+    query = "SELECT * FROM saving_goals WHERE user_id = %s AND status = 1"
     logger.info(f"Executing query for user_id: {user_id}")
     cursor.execute(query, (user_id,))
     goals = cursor.fetchall()
