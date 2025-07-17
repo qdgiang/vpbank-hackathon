@@ -12,6 +12,7 @@ import {
   pauseGoalThunk,
   deleteGoalThunk
 } from '../store/goalsSlice';
+import ReactMarkdown from 'react-markdown';
 
 const defaultGoal = {
   goal_name: '',
@@ -27,6 +28,8 @@ const GoalSettings = () => {
   const [userId] = useState('mock-user-id'); // Replace with real user id
   const [goalForms, setGoalForms] = useState([{ ...defaultGoal }]);
   const [monthlyAmount, setMonthlyAmount] = useState('');
+  const [aiGoalDialogOpen, setAiGoalDialogOpen] = useState(false);
+  const [aiGoalResult, setAiGoalResult] = useState(null);
 
   useEffect(() => {
     dispatch(fetchGoalsData(userId));
@@ -204,9 +207,102 @@ const GoalSettings = () => {
                 </Box>
             ))}
           </Box>
+          <Box display="flex" justifyContent="flex-end" sx={{ px: 2, pb: 2 }}>
+            <Button
+                variant="outlined"
+                color="secondary"
+                onClick={async () => {
+                  try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch('/api/v1/ai/goal/coaching', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                      }
+                    });
+                    const data = await res.json();
+                    setAiGoalResult(data);
+                    setAiGoalDialogOpen(true);
+                  } catch (err) {
+                    setAiGoalResult({ error: 'AI Goal Coaching call failed' });
+                    setAiGoalDialogOpen(true);
+                  }
+                }}
+            >
+              Demo AI Goal Coaching
+            </Button>
+          </Box>
+          <Dialog open={aiGoalDialogOpen} onClose={() => setAiGoalDialogOpen(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>AI Goal Coaching Result</DialogTitle>
+            <DialogContent>
+              {aiGoalResult ? (
+                  <>
+                    {aiGoalResult.message && (
+                        <Typography variant="subtitle2" color="primary" mb={2}>
+                          {aiGoalResult.message}
+                        </Typography>
+                    )}
+                    {aiGoalResult.financial_advice && aiGoalResult.financial_advice.advice && (
+                        <Box mb={2}>
+                          <ReactMarkdown>
+                            {aiGoalResult.financial_advice.advice}
+                          </ReactMarkdown>
+                        </Box>
+                    )}
+                    {aiGoalResult.goal_analysis && aiGoalResult.goal_analysis.length > 0 && (
+                        <Box mb={2}>
+                          <Typography variant="subtitle1" fontWeight="bold" mb={1}>Goal Analysis:</Typography>
+                          {aiGoalResult.goal_analysis.map((goal, idx) => (
+                              <Card key={idx} sx={{ mb: 2, p: 2, background: '#f9f9f9' }}>
+                                <Typography variant="h6">{goal.goal_name}</Typography>
+                                <Chip label={goal.goal_type} sx={{ mr: 1 }} />
+                                <Chip label={
+                                  goal.priority_level === 1 ? 'Urgent' :
+                                  goal.priority_level === 2 ? 'Moderate' : 'Low'
+                                } color="primary" sx={{ mr: 1 }} />
+                                <Typography variant="body2">Status: {goal.on_track_status}</Typography>
+                                <Box mt={1} mb={1}>
+                                  <LinearProgress variant="determinate" value={goal.progress_percent} sx={{ height: 8, borderRadius: 4 }} />
+                                  <Typography variant="body2">
+                                    {goal.current_amount?.toLocaleString('vi-VN')} / {goal.target_amount?.toLocaleString('vi-VN')} VND ({goal.progress_percent}%)
+                                  </Typography>
+                                </Box>
+                                <Typography variant="body2">Target Date: {goal.target_date}</Typography>
+                                <Typography variant="body2">Months Remaining: {goal.remaining_months?.toFixed(1)}</Typography>
+                                <Typography variant="body2">Monthly Needed: {goal.current_monthly_saving_needed?.toLocaleString('vi-VN')} VND</Typography>
+                                <Typography variant="body2">Initial Monthly Needed: {goal.initial_monthly_saving_needed?.toLocaleString('vi-VN')} VND</Typography>
+                              </Card>
+                          ))}
+                        </Box>
+                    )}
+                    {aiGoalResult.financial_advice && aiGoalResult.financial_advice.retrieved_references && aiGoalResult.financial_advice.retrieved_references.length > 0 && (
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight="bold" mb={1}>Tham khảo:</Typography>
+                          <ul>
+                            {aiGoalResult.financial_advice.retrieved_references.map((ref, idx) => (
+                                <li key={idx}>
+                                  <ReactMarkdown>
+                                    {ref.content?.text}
+                                  </ReactMarkdown>
+                                  {ref.location?.s3Location?.uri && (
+                                    <a href={ref.location.s3Location.uri} target="_blank" rel="noopener noreferrer">
+                                      [Nguồn]
+                                    </a>
+                                  )}
+                                </li>
+                            ))}
+                          </ul>
+                        </Box>
+                    )}
+                  </>
+              ) : (
+                  <Typography color="text.secondary">No coaching data.</Typography>
+              )}
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
   );
 };
-
-export default GoalSettings;
+export default GoalSettings; 
