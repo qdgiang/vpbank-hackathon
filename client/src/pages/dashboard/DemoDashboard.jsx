@@ -312,18 +312,35 @@ const DemoDashboard = () => {
   };
   // Calculate saved amount for each goal from transactions (temporarily based on description)
   const computedGoals = goals.map(goal => {
-    const goalTxs = transactions.filter(
-      tx => (tx.msg_content || '').toLowerCase().includes(goal.name.toLowerCase()) ||
-            (tx.msg_content || '').toLowerCase().includes('tiết kiệm')
-    );
-    const saved = goalTxs.reduce((sum, tx) => sum + (getTransactionSign(tx.tranx_type) > 0 ? Math.abs(Number(tx.amount)) : 0), 0);
-    const percent = Math.min(100, (saved / goal.target) * 100);
-    // ETA: remaining months = (target - saved) / average monthly savings
-    const months = Array.from(new Set(goalTxs.map(tx => dayjs(tx.txn_time).format('YYYY-MM'))));
+    const goalName = goal.goal_name?.toLowerCase?.() || '';
+    const target = Number(goal.target_amount) || 1;
+
+    const goalTxs = transactions.filter(tx => {
+      const content = tx.msg_content?.toLowerCase?.() || '';
+      return content.includes(goalName) || content.includes('tiết kiệm');
+    });
+
+    const saved = goalTxs.reduce((sum, tx) => {
+      const amount = Number(tx.amount) || 0;
+      return sum + (getTransactionSign(tx.tranx_type) > 0 ? Math.abs(amount) : 0);
+    }, 0);
+
+    const percent = Math.min(100, (saved / target) * 100);
+
+    const months = Array.from(new Set(goalTxs.map(tx =>
+        dayjs(tx.txn_time).format('YYYY-MM')
+    )));
     const avgPerMonth = months.length > 0 ? saved / months.length : 0;
-    const eta = avgPerMonth > 0 ? Math.ceil((goal.target - saved) / avgPerMonth) : null;
-    return { ...goal, saved, percent, eta };
+    const eta = avgPerMonth > 0 ? Math.ceil((target - saved) / avgPerMonth) : null;
+
+    return {
+      ...goal,
+      saved,
+      percent,
+      eta
+    };
   });
+
 
   useEffect(() => {
     if (!pieChartRef.current) return;

@@ -21,10 +21,32 @@ exports.jarInitialize = (data, token) => axios.post(`${API_GATEWAY_BASE}/jar/ini
 exports.jarUpdatePercent = (data, token) => axios.put(`${API_GATEWAY_BASE}/jar/percent`, data, { headers: getAuthHeader(token) }).then(r => r.data);
 
 // ========== GOAL ==========
-exports.goalSearch = (data, token) => axios.post(`${API_GATEWAY_BASE}/goal/search`, data, { headers: getAuthHeader(token) }).then(r => r.data);
-exports.goalCreate = (data, token) => axios.post(`${API_GATEWAY_BASE}/goal/create`, data, { headers: getAuthHeader(token) }).then(r => r.data);
-exports.goalUpdate = (data, token) => axios.put(`${API_GATEWAY_BASE}/goal/${data.id}`, data, { headers: getAuthHeader(token) }).then(r => r.data);
-exports.goalRemove = (data, token) => axios.delete(`${API_GATEWAY_BASE}/goal/${data.id}`, { data, headers: getAuthHeader(token) }).then(r => r.data);
+// POST /goal/search
+exports.goalSearch = (data, token) =>
+    axios.post(`${API_GATEWAY_BASE}/goal/search`, data, {
+      headers: getAuthHeader(token)
+    }).then(res => res.data);
+// POST /goal/set
+exports.goalCreateBatch = (data, token) =>
+    axios.post(`${API_GATEWAY_BASE}/goal/set`, data, {
+      headers: getAuthHeader(token)
+    }).then(res => res.data);
+// POST /goal/allocate
+exports.goalAllocate = (data, token) =>
+    axios.post(`${API_GATEWAY_BASE}/goal/allocate`, data, {
+      headers: getAuthHeader(token)
+    }).then(res => res.data);
+// POST /goal/pause/:goal_id
+exports.goalPause = (data, token) =>
+    axios.post(`${API_GATEWAY_BASE}/goal/pause/${data.goal_id}`, data, {
+      headers: getAuthHeader(token)
+    }).then(res => res.data);
+// DELETE /goal/:goal_id
+exports.goalRemove = (data, token) =>
+    axios.delete(`${API_GATEWAY_BASE}/goal/${data.goal_id}`, {
+      data,
+      headers: getAuthHeader(token)
+    }).then(res => res.data);
 
 // ========== AI ==========
 exports.aiJarCoaching = (data, token) => axios.post(`${API_GATEWAY_BASE}/ai/jar/coaching`, data, { headers: getAuthHeader(token) }).then(r => r.data);
