@@ -4,7 +4,7 @@ import sys
 import logging
 import sagemaker
 import boto3, sagemaker
-from sagemaker.tensorflow import TensorFlowModel
+from sagemaker.tensorflow.model import TensorFlowModel
 from sagemaker.serializers import JSONSerializer
 from sagemaker.deserializers import JSONDeserializer
 from sagemaker.serverless import ServerlessInferenceConfig

@@ -1,4 +1,5 @@
 # src/inference.py
+print(">>> Inference: Start importing")
 import sys
 import os
 import pandas as pd
