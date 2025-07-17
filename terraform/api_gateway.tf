@@ -146,6 +146,48 @@ resource "aws_api_gateway_resource" "goal_id" {
   path_part   = "{id}"
 }
 
+# /goal/allocate resource
+resource "aws_api_gateway_resource" "goal_allocate" {
+  rest_api_id = aws_api_gateway_rest_api.test_api.id
+  parent_id   = aws_api_gateway_resource.goal.id
+  path_part   = "allocate"
+}
+
+# /goal/set resource
+resource "aws_api_gateway_resource" "goal_set" {
+  rest_api_id = aws_api_gateway_rest_api.test_api.id
+  parent_id   = aws_api_gateway_resource.goal.id
+  path_part   = "set"
+}
+
+# /goal/delete resource
+resource "aws_api_gateway_resource" "goal_delete" {
+  rest_api_id = aws_api_gateway_rest_api.test_api.id
+  parent_id   = aws_api_gateway_resource.goal.id
+  path_part   = "delete"
+}
+
+# /goal/delete/{goal_id} resource
+resource "aws_api_gateway_resource" "goal_delete_id" {
+  rest_api_id = aws_api_gateway_rest_api.test_api.id
+  parent_id   = aws_api_gateway_resource.goal_delete.id
+  path_part   = "{goal_id}"
+}
+
+# /goal/pause resource
+resource "aws_api_gateway_resource" "goal_pause" {
+  rest_api_id = aws_api_gateway_rest_api.test_api.id
+  parent_id   = aws_api_gateway_resource.goal.id
+  path_part   = "pause"
+}
+
+# /goal/pause/{goal_id} resource
+resource "aws_api_gateway_resource" "goal_pause_id" {
+  rest_api_id = aws_api_gateway_rest_api.test_api.id
+  parent_id   = aws_api_gateway_resource.goal_pause.id
+  path_part   = "{goal_id}"
+}
+
 # /ai resource
 resource "aws_api_gateway_resource" "ai" {
   rest_api_id = aws_api_gateway_rest_api.test_api.id
@@ -319,19 +361,44 @@ resource "aws_api_gateway_method" "goal_create_post" {
   authorization = "NONE"
 }
 
-# PUT method for /goal/{id}
-resource "aws_api_gateway_method" "goal_id_put" {
+# POST method for /goal/allocate
+resource "aws_api_gateway_method" "goal_allocate_post" {
   rest_api_id   = aws_api_gateway_rest_api.test_api.id
-  resource_id   = aws_api_gateway_resource.goal_id.id
-  http_method   = "PUT"
+  resource_id   = aws_api_gateway_resource.goal_allocate.id
+  http_method   = "POST"
   authorization = "NONE"
 }
+
 
 # DELETE method for /goal/{id}
 resource "aws_api_gateway_method" "goal_id_delete" {
   rest_api_id   = aws_api_gateway_rest_api.test_api.id
   resource_id   = aws_api_gateway_resource.goal_id.id
   http_method   = "DELETE"
+  authorization = "NONE"
+}
+
+# POST method for /goal/set
+resource "aws_api_gateway_method" "goal_set_post" {
+  rest_api_id   = aws_api_gateway_rest_api.test_api.id
+  resource_id   = aws_api_gateway_resource.goal_set.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+# DELETE method for /goal/delete/{goal_id}
+resource "aws_api_gateway_method" "goal_delete_id_delete" {
+  rest_api_id   = aws_api_gateway_rest_api.test_api.id
+  resource_id   = aws_api_gateway_resource.goal_delete_id.id
+  http_method   = "DELETE"
+  authorization = "NONE"
+}
+
+# PUT method for /goal/pause/{goal_id}
+resource "aws_api_gateway_method" "goal_pause_id_put" {
+  rest_api_id   = aws_api_gateway_rest_api.test_api.id
+  resource_id   = aws_api_gateway_resource.goal_pause_id.id
+  http_method   = "PUT"
   authorization = "NONE"
 }
 
@@ -524,22 +591,56 @@ resource "aws_api_gateway_integration" "goal_create_lambda" {
   uri                     = aws_lambda_function.crud_goal.invoke_arn
 }
 
-# Lambda integration for PUT /goal/{id}
-resource "aws_api_gateway_integration" "goal_id_put_lambda" {
+# Lambda integration for POST /goal/allocate
+resource "aws_api_gateway_integration" "goal_allocate_lambda" {
   rest_api_id = aws_api_gateway_rest_api.test_api.id
-  resource_id = aws_api_gateway_resource.goal_id.id
-  http_method = aws_api_gateway_method.goal_id_put.http_method
+  resource_id = aws_api_gateway_resource.goal_allocate.id
+  http_method = aws_api_gateway_method.goal_allocate_post.http_method
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.crud_goal.invoke_arn
 }
 
+
 # Lambda integration for DELETE /goal/{id}
 resource "aws_api_gateway_integration" "goal_id_delete_lambda" {
   rest_api_id = aws_api_gateway_rest_api.test_api.id
   resource_id = aws_api_gateway_resource.goal_id.id
   http_method = aws_api_gateway_method.goal_id_delete.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.crud_goal.invoke_arn
+}
+
+# Lambda integration for POST /goal/set
+resource "aws_api_gateway_integration" "goal_set_lambda" {
+  rest_api_id = aws_api_gateway_rest_api.test_api.id
+  resource_id = aws_api_gateway_resource.goal_set.id
+  http_method = aws_api_gateway_method.goal_set_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.crud_goal.invoke_arn
+}
+
+# Lambda integration for DELETE /goal/delete/{goal_id}
+resource "aws_api_gateway_integration" "goal_delete_id_lambda" {
+  rest_api_id = aws_api_gateway_rest_api.test_api.id
+  resource_id = aws_api_gateway_resource.goal_delete_id.id
+  http_method = aws_api_gateway_method.goal_delete_id_delete.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.crud_goal.invoke_arn
+}
+
+# Lambda integration for PUT /goal/pause/{goal_id}
+resource "aws_api_gateway_integration" "goal_pause_id_lambda" {
+  rest_api_id = aws_api_gateway_rest_api.test_api.id
+  resource_id = aws_api_gateway_resource.goal_pause_id.id
+  http_method = aws_api_gateway_method.goal_pause_id_put.http_method
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
@@ -753,10 +854,16 @@ resource "aws_api_gateway_deployment" "test" {
     aws_api_gateway_integration.goal_search_lambda,
     aws_api_gateway_method.goal_create_post,
     aws_api_gateway_integration.goal_create_lambda,
-    aws_api_gateway_method.goal_id_put,
-    aws_api_gateway_integration.goal_id_put_lambda,
+    aws_api_gateway_method.goal_allocate_post,
+    aws_api_gateway_integration.goal_allocate_lambda,
     aws_api_gateway_method.goal_id_delete,
     aws_api_gateway_integration.goal_id_delete_lambda,
+    aws_api_gateway_method.goal_set_post,
+    aws_api_gateway_integration.goal_set_lambda,
+    aws_api_gateway_method.goal_delete_id_delete,
+    aws_api_gateway_integration.goal_delete_id_lambda,
+    aws_api_gateway_method.goal_pause_id_put,
+    aws_api_gateway_integration.goal_pause_id_lambda,
     # AI routes
     aws_api_gateway_method.ai_jar_coaching_post,
     aws_api_gateway_integration.ai_jar_coaching_lambda,
@@ -814,15 +921,27 @@ resource "aws_api_gateway_deployment" "test" {
       aws_api_gateway_resource.goal.id,
       aws_api_gateway_resource.goal_search.id,
       aws_api_gateway_resource.goal_create.id,
+      aws_api_gateway_resource.goal_allocate.id,
       aws_api_gateway_resource.goal_id.id,
+      aws_api_gateway_resource.goal_set.id,
+      aws_api_gateway_resource.goal_delete.id,
+      aws_api_gateway_resource.goal_delete_id.id,
+      aws_api_gateway_resource.goal_pause.id,
+      aws_api_gateway_resource.goal_pause_id.id,
       aws_api_gateway_method.goal_search_post.id,
       aws_api_gateway_method.goal_create_post.id,
-      aws_api_gateway_method.goal_id_put.id,
+      aws_api_gateway_method.goal_allocate_post.id,
       aws_api_gateway_method.goal_id_delete.id,
+      aws_api_gateway_method.goal_set_post.id,
+      aws_api_gateway_method.goal_delete_id_delete.id,
+      aws_api_gateway_method.goal_pause_id_put.id,
       aws_api_gateway_integration.goal_search_lambda.id,
       aws_api_gateway_integration.goal_create_lambda.id,
-      aws_api_gateway_integration.goal_id_put_lambda.id,
+      aws_api_gateway_integration.goal_allocate_lambda.id,
       aws_api_gateway_integration.goal_id_delete_lambda.id,
+      aws_api_gateway_integration.goal_set_lambda.id,
+      aws_api_gateway_integration.goal_delete_id_lambda.id,
+      aws_api_gateway_integration.goal_pause_id_lambda.id,
       # AI resources
       aws_api_gateway_resource.ai.id,
       aws_api_gateway_resource.ai_jar.id,
