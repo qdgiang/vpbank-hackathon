@@ -16,7 +16,7 @@ def format_prompt_with_history(chat_history: List[Dict[str, Any]], new_prompt: s
     if not chat_history:
         return new_prompt
 
-    recent_history = chat_history[-6:]
+    recent_history = chat_history[-4:]
     
     formatted_history = "\n".join([
         f"User: {entry['user_prompt']}\nAI: {entry['ai_answer']}\nUsed tools: {entry['used_tools']}"
