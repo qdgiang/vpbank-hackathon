@@ -138,8 +138,7 @@ def handler(event, context):
         # 1. Classify by tranx_type
         if tranx_type not in _SPECIAL_TYPES:
             response_msg = (
-                f"Chúng tôi phân loại giao dịch dựa trên loại giao dịch: '{TRANX_TYPE_VIETNAMESE[tranx_type]}'. "
-                "Nếu bạn muốn chỉnh sửa, hãy phản hồi nhé!"
+                f"Chúng tôi phân loại giao dịch dựa trên loại giao dịch: '{TRANX_TYPE_VIETNAMESE[tranx_type]}'. \n Nếu bạn muốn chỉnh sửa, hãy phản hồi nhé!"
             )
             body = {
                 "transaction_id": transaction_id,
@@ -162,8 +161,7 @@ def handler(event, context):
         label = _detect_label(text_joined)
         if label:
             response_msg = (
-                f"Phát hiện keyword liên quan tới nhóm {label} ({LABEL_VIETNAMESE[label]}), "
-                "bạn có muốn chỉnh sửa không?"
+                f"Phát hiện keyword liên quan tới nhóm {label} ({LABEL_VIETNAMESE[label]}), \n bạn có muốn chỉnh sửa không?"
             )
             body = {
                 "transaction_id": transaction_id,
@@ -192,7 +190,7 @@ def handler(event, context):
         body = {
             "transaction_id": transaction_id,
             "jar": 'NEC',
-            "response_msg": 'Dùng ML đó',
+            "response_msg": 'Hệ thống dùng AI để phân loại, bạn có muốn thay đổi?',
         }
         return response(200, body)
 

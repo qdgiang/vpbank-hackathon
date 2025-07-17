@@ -555,6 +555,7 @@ resource "aws_api_gateway_integration" "ai_jar_coaching_lambda" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.ai_jar_coaching.invoke_arn
+  timeout_milliseconds    = 60000
 }
 
 # Lambda integration for POST /ai/goal/coaching
@@ -566,6 +567,7 @@ resource "aws_api_gateway_integration" "ai_goal_coaching_lambda" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.ai_goal_coaching.invoke_arn
+  timeout_milliseconds    = 60000
 }
 
 # Lambda integration for POST /ai/qna/session
@@ -577,6 +579,7 @@ resource "aws_api_gateway_integration" "ai_qna_session_lambda" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.ai_qna_session.invoke_arn
+  timeout_milliseconds    = 60000
 }
 
 # Lambda integration for GET /auth/{id}
