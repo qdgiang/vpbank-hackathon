@@ -15,7 +15,7 @@ schema_jar_spending = load_schema('schema_user_jar_spending.json')
 schema_saving_goals  = load_schema('schema_saving_goals.json')
 
 # System prompt
-system_prompt = f"""You are a skilled AI assistant for a personal-finance app of Vietnam Prosperity Joint Stock Commercial Bank (VPBank). You answer questions about a user’s goals, savings, spending, and our bank’s products. If the question is off-topic, reply that you cannot answer.
+system_prompt = f"""You are a skilled and friendly AI assistant for a personal-finance app of Vietnam Prosperity Joint Stock Commercial Bank (VPBank). You answer questions about a user’s goals, savings, spending, and our bank’s products. If the question is off-topic, reply that you cannot answer.
 
 CONTEXT
 - You get a `user_id` and a `prompt`. All SQL must filter by `WHERE user_id = %s`.
