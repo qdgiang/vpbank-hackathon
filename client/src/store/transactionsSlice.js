@@ -8,10 +8,11 @@ import {
 
 export const fetchTransactionsData = createAsyncThunk(
   'transactions/fetchTransactions',
-  async (_, { rejectWithValue }) => {
+  async (params = {}, { rejectWithValue }) => {
     try {
-      const response = await fetchTransactions();
-      return response.data.transactions;
+      const response = await fetchTransactions(params);
+      // response.data.transactions, response.data.total
+      return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -34,6 +35,7 @@ export const updateTransactionData = createAsyncThunk(
   'transactions/updateTransaction',
   async ({ transactionId, data }, { rejectWithValue }) => {
     try {
+      console.log(transactionId)
       const response = await updateTransaction(transactionId, data);
       return response.data;
     } catch (error) {
@@ -56,6 +58,7 @@ export const deleteTransactionData = createAsyncThunk(
 
 const initialState = {
   transactions: [],
+  total: 0,
   loading: false,
   error: null
 };
@@ -77,7 +80,8 @@ const transactionsSlice = createSlice({
       })
       .addCase(fetchTransactionsData.fulfilled, (state, action) => {
         state.loading = false;
-        state.transactions = action.payload;
+        state.transactions = action.payload.transactions || action.payload.data || [];
+        state.total = action.payload.total || 0;
       })
       .addCase(fetchTransactionsData.rejected, (state, action) => {
         state.loading = false;
@@ -90,7 +94,9 @@ const transactionsSlice = createSlice({
       })
       .addCase(createTransactionData.fulfilled, (state, action) => {
         state.loading = false;
-        state.transactions.push(action.payload);
+        // Nếu đang phân trang, có thể cần refetch thay vì push, nhưng tạm thời cứ push
+        state.transactions.unshift(action.payload); // Thêm vào đầu danh sách
+        state.total += 1;
       })
       .addCase(createTransactionData.rejected, (state, action) => {
         state.loading = false;
@@ -103,10 +109,6 @@ const transactionsSlice = createSlice({
       })
       .addCase(updateTransactionData.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.transactions.findIndex(t => t.id === action.payload.id);
-        if (index !== -1) {
-          state.transactions[index] = action.payload;
-        }
       })
       .addCase(updateTransactionData.rejected, (state, action) => {
         state.loading = false;
@@ -120,6 +122,7 @@ const transactionsSlice = createSlice({
       .addCase(deleteTransactionData.fulfilled, (state, action) => {
         state.loading = false;
         state.transactions = state.transactions.filter(t => t.id !== action.payload);
+        state.total = Math.max(0, state.total - 1);
       })
       .addCase(deleteTransactionData.rejected, (state, action) => {
         state.loading = false;

@@ -24,6 +24,8 @@ import Button from '@mui/material/Button';
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffect } from 'react';
 import { fetchNotificationsData, updateNotificationData, deleteNotificationData } from '../store/notificationsSlice';
+import { fetchTransactionsData } from '../store/transactionsSlice';
+import Snackbar from '@mui/material/Snackbar';
 
 const NOTI_TYPES = [
   'all',
@@ -143,18 +145,20 @@ const NotificationCenter = ({ transactions }) => {
   const { notifications, loading } = useSelector(state => state.notifications);
   // --- Polling state ---
   const [polledNotifications, setPolledNotifications] = useState([]);
-  const [lastSeenTime, setLastSeenTime] = useState(() => localStorage.getItem('last_seen_time') || null);
+  const [lastSeenTime, setLastSeenTime] = useState(null);
   const intervalRef = useRef();
   const user_id = useSelector(state => state.auth.user?.user_id); // adjust if user_id is elsewhere
+  const [showNewNotiAlert, setShowNewNotiAlert] = useState(false);
+  const [lastNotiId, setLastNotiId] = useState(null);
 
-  // Polling fetchNotifications every 30s
+  // --- Polling fetchNotifications every 10s, only append new notifications by id ---
   useEffect(() => {
     if (!user_id) return;
     function fetchNotifications() {
       const token = localStorage.getItem('token');
       const body = {
         pagination: { page_size: 20, current: 1 },
-        filters: lastSeenTime ? { from_date: lastSeenTime } : {}
+        filters: lastSeenTime ? { from_date: lastSeenTime, status: 0 } : {status: 0}
       };
       fetch('/api/v1/notification/search', {
         method: 'POST',
@@ -166,43 +170,47 @@ const NotificationCenter = ({ transactions }) => {
       })
       .then(res => res.json())
       .then(data => {
+        data.notifications = data.notifications.sort((a, b) => b.notification_id - a.notification_id)
         if (data.notifications && data.notifications.length > 0) {
-          setPolledNotifications(prev => [...data.notifications, ...prev]);
+          setPolledNotifications(prev => {
+            // Only append notifications with new id
+            const existingIds = new Set(prev.map(n => n.notification_id));
+            const newNotis = data.notifications.filter(n => !existingIds.has(n.notification_id));
+            return [...newNotis, ...prev];
+          });
           setLastSeenTime(data.notifications[0].created_at);
           localStorage.setItem('last_seen_time', data.notifications[0].created_at);
+          // Nếu có noti classify thì fetch lại transactions
+          const newClassifyNoti = data.notifications[0].notification_type === 'classify' && data.notifications[0].status === 0;
+          if (newClassifyNoti) {
+            dispatch(fetchTransactionsData());
+          }
         }
       });
     }
     fetchNotifications();
-    intervalRef.current = setInterval(fetchNotifications, 30000);
+    intervalRef.current = setInterval(fetchNotifications, 10000); // 10s polling
     return () => clearInterval(intervalRef.current);
   }, [user_id, lastSeenTime]);
 
   // Merge polledNotifications with Redux notifications (avoid duplicates)
   const mergedNotifications = [...polledNotifications, ...notifications.filter(n => !polledNotifications.some(pn => pn.notification_id === n.notification_id))];
 
-  const [tab, setTab] = useState(0); // 0: All, 1: Unread
-  const [typeFilter, setTypeFilter] = useState('all');
+  // Remove tab and type filter
   const [viewAllOpen, setViewAllOpen] = useState(false);
   const [lazyCount, setLazyCount] = useState(20);
 
-  const handleTabChange = (e, v) => setTab(v);
-  const handleTypeChange = (e) => setTypeFilter(e.target.value);
   const handleViewAllOpen = () => { setViewAllOpen(true); setLazyCount(20); };
   const handleViewAllClose = () => setViewAllOpen(false);
   const handleLoadMore = () => setLazyCount(c => c + 20);
 
-  let filtered = mergedNotifications;
-  if (tab === 1) filtered = filtered.filter(n => n.status === 0);
-  if (typeFilter !== 'all') filtered = filtered.filter(n => n.notification_type === typeFilter);
-  // Sort by created_at desc
-  filtered = [...filtered].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  const top5 = filtered.slice(0, 5);
+  // Sort by notification_id desc
+  const sortedNotifications = [...mergedNotifications].sort((a, b) => b.notification_id - a.notification_id);
+  const top5 = sortedNotifications.slice(0, 5);
+  // For lazy load in popup
+  const lazyFiltered = sortedNotifications.slice(0, lazyCount);
 
   // For lazy load in popup
-  const lazyFiltered = filtered.slice(0, lazyCount);
-
-  // Handle scroll to bottom in DialogContent for lazy load
   const dialogContentRef = useRef();
   useEffect(() => {
     if (!viewAllOpen) return;
@@ -218,8 +226,8 @@ const NotificationCenter = ({ transactions }) => {
   }, [viewAllOpen]);
 
   // Replace onRead and onDelete handlers:
-  const handleRead = (id) => {
-    // Mark as read via API
+  const _handleRead = (id) => {
+    // Mark as read via API (only call once)
     fetch(`/api/v1/notification/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -227,15 +235,39 @@ const NotificationCenter = ({ transactions }) => {
     })
     .then(res => res.json())
     .then(() => {
-      // Update local state
-      setPolledNotifications(prev => prev.map(n => n.notification_id === id ? { ...n, status: 1 } : n));
+      // Update local state for polledNotifications
+      setPolledNotifications(prev => prev.map(n => n.notification_id === id ? { ...n, status: 1, read: true } : n));
+      // Update Redux notifications (if present)
       dispatch(updateNotificationData({ id, data: { status: 1, read: true } }));
-    });
+    });          
   };
   const handleDelete = (id) => {
     dispatch(deleteNotificationData(id));
   };
 
+  // Thêm hoặc cập nhật hàm handleReadNotification
+  const handleRead = async (id) => {
+    const token = localStorage.getItem('token');
+    try {
+      await fetch(`/api/v1/notification/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+      // Update local state ngay lập tức
+      setPolledNotifications(prev =>
+        prev.map(n => n.notification_id === id ? { ...n, status: 1, read: true } : n)
+      );
+      // Nếu dùng Redux, update luôn trong store
+      dispatch(updateNotificationData({ id, data: { status: 1, read: true } }));
+    } catch (err) {
+      console.error('Mark read failed', err);
+    }
+  };
+
+  // --- UI ---
   return (
     <>
     <Card sx={{ borderRadius: 4, boxShadow: '0 2px 12px #0001', mb: 2 }}>
@@ -255,33 +287,6 @@ const NotificationCenter = ({ transactions }) => {
             Notification Center
           </Typography>
         </Box>
-          <Box display="flex" alignItems="center" gap={2} mb={2}>
-            <Tabs value={tab} onChange={handleTabChange}>
-              <Tab label="All" />
-              <Tab label="Unread" />
-            </Tabs>
-            <Select size="small" value={typeFilter} onChange={handleTypeChange} sx={{ minWidth: 180 }}>
-              <MenuItem value="all">All Types</MenuItem>
-              <MenuItem value="jar_classification">Jar Classification</MenuItem>
-              <MenuItem value="jar_confirmed">Jar Confirmed</MenuItem>
-              <MenuItem value="jar_rejected">Jar Rejected</MenuItem>
-              <MenuItem value="jar_warning">Jar Warning</MenuItem>
-              <MenuItem value="goal_created">Goal Created</MenuItem>
-              <MenuItem value="goal_progress">Goal Progress</MenuItem>
-              <MenuItem value="goal_completed">Goal Completed</MenuItem>
-              <MenuItem value="goal_failed">Goal Failed</MenuItem>
-              <MenuItem value="goal_review_reminder">Goal Review Reminder</MenuItem>
-              <MenuItem value="coaching_tip">Coaching Tip</MenuItem>
-              <MenuItem value="coaching_warning">Coaching Warning</MenuItem>
-              <MenuItem value="coaching_motivation">Coaching Motivation</MenuItem>
-              <MenuItem value="transaction_alert">Transaction Alert</MenuItem>
-              <MenuItem value="system_announcement">System Announcement</MenuItem>
-              <MenuItem value="milestone_achieved">Milestone Achieved</MenuItem>
-              <MenuItem value="reminder_contribution">Reminder Contribution</MenuItem>
-              <MenuItem value="account_update_notice">Account Update Notice</MenuItem>
-              <MenuItem value="security_alert">Security Alert</MenuItem>
-            </Select>
-          </Box>
         <List>
             {top5.length === 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
@@ -289,10 +294,10 @@ const NotificationCenter = ({ transactions }) => {
             </Typography>
           )}
             {top5.map((noti, idx) => (
-              <NotificationItem key={noti.notification_id} noti={noti} transactions={transactions} onRead={handleRead} onDelete={handleDelete} />
+              <NotificationItem key={noti.notification_id} noti={noti} transactions={transactions} onRead={handleRead} />
           ))}
         </List>
-          {filtered.length > 5 && (
+          {sortedNotifications.length > 5 && (
             <Box textAlign="center" mt={2}>
               <Button variant="outlined" size="small" onClick={handleViewAllOpen}>View All</Button>
             </Box>
@@ -309,16 +314,23 @@ const NotificationCenter = ({ transactions }) => {
               </Typography>
             )}
             {lazyFiltered.map((noti, idx) => (
-              <NotificationItem key={noti.notification_id} noti={noti} transactions={transactions} onRead={handleRead} onDelete={handleDelete} />
+              <NotificationItem key={noti.notification_id} noti={noti} transactions={transactions} onRead={handleRead} />
             ))}
           </List>
-          {lazyFiltered.length < filtered.length && (
+          {lazyFiltered.length < sortedNotifications.length && (
             <Box textAlign="center" mt={2}>
               <Button variant="outlined" size="small" onClick={handleLoadMore}>Load more</Button>
             </Box>
           )}
         </DialogContent>
       </Dialog>
+      <Snackbar
+        open={showNewNotiAlert}
+        autoHideDuration={3000}
+        onClose={() => setShowNewNotiAlert(false)}
+        message="Bạn có thông báo mới!"
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      />
     </>
   );
 };

@@ -98,9 +98,9 @@ def search_goals(event):
     page_size = pagination.get('page_size', 20)
     current = pagination.get('current', 1)
     offset = (current - 1) * page_size
-    query = "SELECT * FROM goal_setting WHERE user_id = %s"
+    query = "SELECT * FROM saving_goals WHERE user_id = %s"
     params = [user_id]
-    count_query = "SELECT COUNT(*) as total FROM goal_setting WHERE user_id = %s"
+    count_query = "SELECT COUNT(*) as total FROM saving_goals WHERE user_id = %s"
     count_params = [user_id]
     # Filter
     if filters.get('status'):

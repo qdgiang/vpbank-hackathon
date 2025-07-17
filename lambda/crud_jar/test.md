@@ -60,3 +60,22 @@
   "path": "/jar/percent"
 }
 ``` 
+
+## 7. Cập nhật spent_amount cho jar (update_budget)
+### Event: update_budget_existing
+```json
+{
+  "body": "{\"user_id\": \"000b1dd0-c880-45fd-8515-48dd705a3aa2\", \"amount\": 100000, \"tranx_type\": \"expense\", \"category_label\": \"EDU\", \"y_month\": \"2024-07\"}",
+  "httpMethod": "POST",
+  "path": "/jar/update_budget"
+}
+```
+
+### Event: update_budget_insert_new
+```json
+{
+  "body": "{\"user_id\": \"000b1dd0-c880-45fd-8515-48dd705a3aa2\", \"amount\": 50000, \"tranx_type\": \"expense\", \"category_label\": \"PLY\", \"y_month\": \"2024-08\"}",
+  "httpMethod": "POST",
+  "path": "/jar/update_budget"
+}
+``` 
