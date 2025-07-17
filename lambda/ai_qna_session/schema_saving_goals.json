@@ -4,11 +4,11 @@
   "columns": {
     "goal_id": "CHAR(36) – Unique identifier for the goal (PRIMARY KEY), defaults to UUID()",
     "user_id": "CHAR(36) – References users(user_id), ON DELETE CASCADE",
-    "goal_name": "VARCHAR(255) – Name of the goal (e.g., 'Buy a house', 'Trip to Japan') - can be in either English or Vietnamese (mainly), use OR so as not to omit any when querying",
+    "goal_name": "VARCHAR(255) – Name of the goal (e.g., 'Buy a house', 'Trip to Japan') - can be in either English or Vietnamese, use OR so as not to omit any when querying",
     "target_amount": "NUMERIC(15,2) – Target amount to be saved, must be > 0",
     "current_amount": "NUMERIC(15,2) – Current amount saved, must be ≥ 0, defaults to 0.00",
     "target_date": "DATE – Deadline to achieve the goal",
-    "goal_type": "VARCHAR(20) – Type of goal (e.g., 'savings', 'event', 'investment', 'travel', etc) - can be in either English or Vietnamese (mainly)",
+    "goal_type": "VARCHAR(20) – Type of goal (e.g., 'savings', 'event', 'investment', 'travel', etc) - can be in either English or Vietnamese",
     "priority_level": "INTEGER – Priority level (1, 2, or 3)",
     "weight": "NUMERIC(5,2) – Percentage of the user’s monthly income allocated to this goal’s jar (auto-calculated for active goals)",
     "status": "INTEGER – Status of the goal (0: Pause, 1: Active, 2: Completed)",
