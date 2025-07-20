@@ -286,7 +286,7 @@ def set_goal(user_id, data):
                 "month_req": float(month_req),
                 "weight": float(weight)
             })
-
+        start_date = date.today().replace(day=1)
         for g in unlocked:
             gid = g['goal_id']
             tgt_amt = Decimal(g['target_amount'])
