@@ -12,8 +12,8 @@ _SPECIAL_TYPES = {"qrcode_payment", "transfer_out", "atm_withdrawal"}
 
 _KEYWORDS: Dict[str, List[str]] = {
     "NEC":  ["grab", "cho", "sieu thi", "taxi", "an uong", "an nuong", "di cho"],
-    "PLAY": ["netflix", "spotify", "game", "cinema", "rap phim", "tiktok", "cgv", "galaxy"],
-    "GIVE": ["tu thien", "thien nguyen", "ung ho", "donate", "charity", "quy"],
+    "PLY": ["netflix", "spotify", "game", "cinema", "rap phim", "tiktok", "cgv", "galaxy"],
+    "GIV": ["tu thien", "thien nguyen", "ung ho", "donate", "charity", "quy"],
     "EDU":  ["hoc phi", "khoa hoc", "sach", "book", "education", "course", "udemy", "coursera"],
     "LTSS": ["tiet kiem", "mua nha", "mua nha", "mua xe", "mua xe"],
     "FFA":  ["chung khoan", "chungkhoan", "crypto", "investment", "vang", "stock", "securities"],
@@ -38,11 +38,11 @@ TRANX_TYPE_VIETNAMESE = {
 
 LABEL_VIETNAMESE = {
     "NEC": "Nhu cầu thiết yếu",
-    "GIVE": "Cho đi / Tương lai",
+    "GIV": "Cho đi / Tương lai",
     "LTSS": "Tiết kiệm dài hạn",
     "FFA": "Tự do tài chính",
     "EDU": "Giáo dục",
-    "PLAY": "Giải trí"
+    "PLY": "Giải trí"
 }
 
 TRANX_TYPE_TO_LABEL = {
@@ -50,7 +50,7 @@ TRANX_TYPE_TO_LABEL = {
     "loan_repayment": "NEC",       # Trừ tiền tự động trả khoản vay
     "stock": "FFA",                # Mua/bán cổ phiếu
     "bill_payment": "NEC",         # Thanh toán điện, nước, mạng
-    "opensaving": "GIVE",          # Mở tài khoản tiết kiệm linh hoạt (cho đi/tương lai)
+    "opensaving": "GIV",          # Mở tài khoản tiết kiệm linh hoạt (cho đi/tương lai)
     "opendeposit": "LTSS",         # Gửi tiết kiệm có kỳ hạn
     "openaccumulation": "LTSS",    # Kế hoạch tích lũy định kỳ
     "mobile_topup": "NEC"          # Nạp điện thoại
