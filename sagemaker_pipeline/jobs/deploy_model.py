@@ -3,8 +3,8 @@ import os
 import sys
 import logging
 import sagemaker
-import boto3, sagemaker
-from sagemaker.tensorflow.model import TensorFlowModel
+import boto3
+from sagemaker.tensorflow import TensorFlowModel
 from sagemaker.serializers import JSONSerializer
 from sagemaker.deserializers import JSONDeserializer
 from sagemaker.serverless import ServerlessInferenceConfig
@@ -53,7 +53,7 @@ def main():
         serializer=JSONSerializer(),
         deserializer=JSONDeserializer()
     )
-    logger.info("✓ Serverless endpoint deployed:", predictor.endpoint_name)
+    logger.info("✓ Serverless endpoint deployed: %s", predictor.endpoint_name)
 
 if __name__ == '__main__':
     main()
