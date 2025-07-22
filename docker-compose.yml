@@ -3,7 +3,7 @@ services:
   backend:
     build:
       context: ./server
-      dockerfile: server/dev.Dockerfile
+      dockerfile: dev.Dockerfile
     container_name: backend
     ports:
       - "5001:5001"
@@ -15,11 +15,13 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+    networks:
+      - app-network
 
   frontend:
     build:
       context: ./client
-      dockerfile: client/dev.Dockerfile
+      dockerfile: dev.Dockerfile
     container_name: frontend
     ports:
       - "3000:3000"
@@ -31,4 +33,9 @@ services:
     depends_on:
       - backend
     environment:
-      - NODE_ENV=development 
+      - NODE_ENV=development
+    networks:
+      - app-network
+
+networks:
+  app-network:

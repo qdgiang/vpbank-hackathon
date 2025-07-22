@@ -130,6 +130,7 @@ def preprocess_data(args):
     df = df[df["user_id"].notna()]
     df = df[df["user_id"].str.lower() != 'nan']
     df = df[df['tranx_type'].isin({'transfer_out', 'qrcode_payment', 'atm_withdrawal'})]
+
     df['day_of_month'] = df['day_of_month'] / 31
     df = df[SELECTED_FEATURES + ["transaction_id", "category_label", "user_id", "sentence_embedding"]]
 

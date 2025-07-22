@@ -25,17 +25,7 @@ export const createNotificationData = createAsyncThunk(
   }
 );
 
-export const updateNotificationData = createAsyncThunk(
-  'notifications/updateNotification',
-  async ({ id, data }, { rejectWithValue }) => {
-    try {
-      const response = await updateNotification(id, data);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
-    }
-  }
-);
+// updateNotificationData now only updates state, not API
 
 export const deleteNotificationData = createAsyncThunk(
   'notifications/deleteNotification',
@@ -60,6 +50,13 @@ const notificationsSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    updateNotificationData: (state, action) => {
+      const { id, data } = action.payload;
+      const idx = state.notifications.findIndex(n => n.notification_id === id);
+      if (idx !== -1) {
+        state.notifications[idx] = { ...state.notifications[idx], ...data };
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -78,15 +75,11 @@ const notificationsSlice = createSlice({
       .addCase(createNotificationData.fulfilled, (state, action) => {
         state.notifications.unshift(action.payload);
       })
-      .addCase(updateNotificationData.fulfilled, (state, action) => {
-        const idx = state.notifications.findIndex(n => n.notification_id === action.payload.notification_id);
-        if (idx !== -1) state.notifications[idx] = action.payload;
-      })
       .addCase(deleteNotificationData.fulfilled, (state, action) => {
         state.notifications = state.notifications.filter(n => n.notification_id !== action.payload);
       });
   },
 });
 
-export const { clearError } = notificationsSlice.actions;
+export const { clearError, updateNotificationData } = notificationsSlice.actions;
 export default notificationsSlice.reducer; 

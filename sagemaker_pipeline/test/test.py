@@ -24,3 +24,4 @@ predicted_class = np.argmax(y_pred, axis=1)
 
 print("Predicted probabilities:", y_pred)
 print("Predicted class:", predicted_class[0])
+

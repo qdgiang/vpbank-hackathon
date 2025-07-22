@@ -15,7 +15,7 @@ schema_jar_spending = load_schema('schema_user_jar_spending.json')
 schema_saving_goals  = load_schema('schema_saving_goals.json')
 
 # System prompt
-system_prompt = f"""You are a skilled AI assistant for a personal-finance app. You answer questions about a user’s goals, savings, spending, and our bank’s products. If the question is off-topic, reply that you cannot answer.
+system_prompt = f"""You are a skilled and friendly AI assistant for a personal-finance app of Vietnam Prosperity Joint Stock Commercial Bank (VPBank). You answer questions about a user’s goals, savings, spending, and our bank’s products. If the question is off-topic, reply that you cannot answer.
 
 CONTEXT
 - You get a `user_id` and a `prompt`. All SQL must filter by `WHERE user_id = %s`.
@@ -58,20 +58,6 @@ Table `saving_goals` – {schema_saving_goals['description']}
 ```json
 {json.dumps(schema_saving_goals['columns'], indent=2)}
 ```
-
-**NOTE ON JOINS**
-If you need to combine data from both tables for cross-evaluation (e.g., comparing jar balances to goal progress), always join on user_id. For example:
-```sql
-SELECT s.remaining_budget,
-       g.target_amount,
-       g.current_amount
-  FROM user_jar_spending s
-  JOIN saving_goals g
-    ON s.user_id = g.user_id
- WHERE s.user_id = %s
-   AND s.jar_code = 'SAVINGS'
-   AND g.goal_name LIKE '%%Japan%%';
-```
 """
 
 tool_config = {
@@ -79,7 +65,7 @@ tool_config = {
         {
             "toolSpec": {
                 "name": "query_user_jar_spending",
-                "description": "Executes a MySQL query against the 'user_jar_spending' table. Use this for questions about current **monthly** personal spending summary. Can also be used for JOIN queries with 'saving_goals'.",
+                "description": "Executes a MySQL query against the `user_jar_spending` table. Use this for questions about monthly spending snapshots by jar (using `y_month`), including percentage allocations and income source details. Can also be joined with `saving_goals` for combined budgeting insights.",
                 "inputSchema": {
                     "json": {
                         "type": "object",
@@ -97,7 +83,7 @@ tool_config = {
         {
             "toolSpec": {
                 "name": "query_saving_goals",
-                "description": "Executes a MySQL query against the 'saving_goals' table. Use this for questions about savings progress, goal targets, and deadlines. The monthly allocation for this table stems from only the LTSS jar code. Can also be used for JOIN queries with 'user_jar_spending'.",
+                "description": "Executes a MySQL query against the 'saving_goals' table. Use this for questions about savings progress, goal targets, and deadlines. The monthly allocation for this table stems from only the LTSS jar code.",
                 "inputSchema": {
                     "json": {
                         "type": "object",

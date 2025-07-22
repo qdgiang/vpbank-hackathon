@@ -1,173 +1,218 @@
 import json
 import logging
 import os
-import pymysql
-import uuid
+import boto3
 from typing import Dict, Any
-from datetime import datetime
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Database connection parameters
-DB_HOST = os.environ.get('DB_HOST')
-DB_PORT = int(os.environ.get('DB_PORT', 3306))
-DB_NAME = os.environ.get('DB_NAME')
-DB_USER = os.environ.get('DB_USER')
-DB_PASSWORD = os.environ.get('DB_PASSWORD')
+# Environment Variables
+CRUD_TRANSACTION_LAMBDA = os.environ.get('CRUD_TRANSACTION_LAMBDA', 'smart-jarvis-crud-transaction')
+AI_CLASSIFY_LAMBDA = os.environ.get('AI_CLASSIFY_LAMBDA', 'smart-jarvis-phuong-test')
+CRUD_NOTIFICATION_LAMBDA = os.environ.get('CRUD_NOTIFICATION_LAMBDA', 'smart-jarvis-crud-notification')
+CRUD_JAR_LAMBDA = os.environ.get('CRUD_JAR_LAMBDA', 'smart-jarvis-crud-jar')
+
+lambda_client = boto3.client('lambda')
+
+# --- Notification helper ---
+def notify_transaction_event(user_id, title, message, notification_type, severity, transaction_id):
+    payload = {
+        "body": json.dumps({
+            "user_id": user_id,
+            "title": title,
+            "message": message,
+            "notification_type": notification_type,
+            "severity": severity,
+            "object_code": "TRANSACTION",
+            "object_id": transaction_id
+        }),
+        "httpMethod": "POST",
+        "path": "/notification/create"
+    }
+    try:
+        lambda_client.invoke(
+            FunctionName=CRUD_NOTIFICATION_LAMBDA,
+            InvocationType='Event',
+            Payload=json.dumps(payload)
+        )
+    except Exception as e:
+        logger.error(f"Send notification failed: {e}")
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    """
-    Process SQS messages containing transaction data
-    """
-    
-    try:
-        processed_records = []
-        
-        for record in event['Records']:
-            # Extract message details
-            message_id = record['messageId']
-            body = record['body']
-            
-            # Parse the complete JSON transaction data from message body
-            try:
-                transaction_data = json.loads(body)
-                logger.info(f"Processing transaction for user: {transaction_data.get('user_id')}")
-                logger.info(f"Transaction data: {json.dumps(transaction_data, indent=2)}")
-                
-                # Validate required fields
-                required_fields = ['user_id', 'amount', 'txn_time', 'msg_content', 'merchant', 'location', 'channel', 'tranx_type']
-                missing_fields = [field for field in required_fields if field not in transaction_data]
-                
-                if missing_fields:
-                    logger.warning(f"Missing required fields: {missing_fields}")
-                    processed_records.append({
-                        'messageId': message_id,
-                        'status': 'failed',
-                        'error': f'Missing required fields: {missing_fields}',
-                        'transaction': transaction_data
-                    })
-                    continue
-                
-                # Process the transaction (add your business logic here)
-                process_transaction(transaction_data)
-                
-                processed_records.append({
-                    'messageId': message_id,
-                    'status': 'processed',
-                    'transaction': transaction_data
-                })
-                
-            except json.JSONDecodeError as je:
-                logger.error(f"Invalid JSON in message body: {body}. Error: {str(je)}")
-                processed_records.append({
-                    'messageId': message_id,
-                    'status': 'failed',
-                    'error': f'Invalid JSON: {str(je)}',
-                    'raw_body': body
-                })
-                continue
-            
-        logger.info(f"Successfully processed {len(processed_records)} records")
-        
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'message': f'Successfully processed {len(processed_records)} transactions',
-                'processed_records': processed_records
-            })
-        }
-        
-    except Exception as e:
-        logger.error(f"Error processing SQS records: {str(e)}")
-        raise e
+    results = []
+    for record in event['Records']:
+        message_id = record['messageId']
+        body = record['body']
+        step_result = {'messageId': message_id, 'steps': []}
 
-def get_db_connection():
-    """
-    Create database connection
-    """
-    try:
-        connection = pymysql.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_NAME,
-            charset='utf8mb4',
-            cursorclass=pymysql.cursors.DictCursor,
-            autocommit=True
-        )
-        return connection
-    except Exception as e:
-        logger.error(f"Database connection failed: {str(e)}")
-        raise e
+        try:
+            transaction_data = json.loads(body)
+        except Exception as e:
+            logger.error(f"Invalid JSON: {e}")
+            step_result['steps'].append({'step': 'parse_message', 'status': 'failed', 'error': str(e)})
+            results.append(step_result)
+            continue
 
-def process_transaction(transaction_data: Dict[str, Any]) -> None:
-    """
-    Insert transaction into database
-    """
-    
-    user_id = transaction_data['user_id']
-    amount = transaction_data['amount']
-    merchant = transaction_data['merchant']
-    tranx_type = transaction_data['tranx_type']
-    
-    logger.info(f"Processing {tranx_type} transaction: {amount} VND for user {user_id} at {merchant}")
-    
-    connection = None
-    try:
-        # Get database connection
-        connection = get_db_connection()
-        
-        with connection.cursor() as cursor:
-            # Generate transaction ID
-            transaction_id = str(uuid.uuid4())
-            
-            # Insert transaction into database
-            insert_query = """
-                INSERT INTO transactions (
-                    transaction_id, user_id, amount, txn_time, msg_content, merchant, 
-                    location, channel, tranx_type, is_manual_override
-                ) VALUES (
-                    %(transaction_id)s, %(user_id)s, %(amount)s, %(txn_time)s, %(msg_content)s, %(merchant)s,
-                    %(location)s, %(channel)s, %(tranx_type)s, %(is_manual_override)s
-                )
-            """
-            
-            # Parse txn_time string to datetime if needed
-            txn_time = transaction_data['txn_time']
-            if isinstance(txn_time, str):
-                # Parse ISO format timestamp
-                txn_time = datetime.fromisoformat(txn_time.replace('Z', '+00:00'))
-            
-            transaction_params = {
-                'transaction_id': transaction_id,
-                'user_id': user_id,
-                'amount': float(amount),
-                'txn_time': txn_time,
-                'msg_content': transaction_data.get('msg_content'),
-                'merchant': merchant,
-                'location': transaction_data.get('location'),
-                'channel': transaction_data.get('channel'),
-                'tranx_type': tranx_type,
-                'is_manual_override': True  # Since this comes from API
+        user_id = transaction_data.get('user_id')
+        transaction_id = None
+        category_label = None
+
+        # 1. Create Transaction
+        try:
+            crud_payload = {
+                'body': json.dumps(transaction_data),
+                'httpMethod': 'POST',
+                'path': '/transaction/create'
             }
-            
-            cursor.execute(insert_query, transaction_params)
-            
-            logger.info(f"Transaction inserted successfully with ID: {transaction_id}")
-            logger.info(f"User {user_id}: {tranx_type} of {amount} VND at {merchant}")
-            
-            # Additional business logic can be added here:
-            # - Update user balance
-            # - Categorize transaction
-            # - Send notifications
-            # - Fraud detection
-            # - Analytics
-            
-    except Exception as e:
-        logger.error(f"Failed to insert transaction for user {user_id}: {str(e)}")
-        raise e
-    finally:
-        if connection:
-            connection.close()
+            crud_resp = lambda_client.invoke(
+                FunctionName=CRUD_TRANSACTION_LAMBDA,
+                InvocationType='RequestResponse',
+                Payload=json.dumps(crud_payload)
+            )
+            crud_resp_body = json.loads(crud_resp['Payload'].read())
+            crud_status = crud_resp_body.get('statusCode')
+            crud_body = json.loads(crud_resp_body.get('body', '{}'))
+
+            if crud_status == 201:
+                transaction_id = crud_body.get('transaction_id')
+                step_result['steps'].append({
+                    'step': 'create_transaction',
+                    'status': 'success',
+                    'transaction_id': transaction_id,
+                    'response': crud_body
+                })
+                notify_transaction_event(user_id, "Giao dịch thành công", "Giao dịch của bạn đã được ghi nhận thành công.", "transaction", "info", transaction_id)
+            else:
+                step_result['steps'].append({'step': 'create_transaction', 'status': 'failed', 'response': crud_body})
+                notify_transaction_event(user_id, "Giao dịch thất bại", "Giao dịch của bạn không thành công. Vui lòng thử lại.", "transaction", "error", crud_body.get('transaction_id', ''))
+                results.append(step_result)
+                continue
+        except Exception as e:
+            logger.error(f"Create transaction failed: {e}")
+            step_result['steps'].append({'step': 'create_transaction', 'status': 'failed', 'error': str(e)})
+            notify_transaction_event(user_id, "Giao dịch thất bại", "Giao dịch của bạn không thành công. Vui lòng thử lại.", "transaction", "error", '')
+            results.append(step_result)
+            continue
+
+        # 2. AI Classify
+        if transaction_data.get('tranx_type') not in ['transfer_in', 'cashback', 'refund']:
+            try:
+                ai_payload = {
+                    'transaction_id': transaction_id,
+                    'user_id': user_id,
+                    'msg_content': transaction_data.get('msg_content'),
+                    'amount': transaction_data.get('amount'),
+                    'txn_time': transaction_data.get('txn_time'),
+                    'merchant': transaction_data.get('merchant'),
+                    'to_account_name': transaction_data.get('to_account_name'),
+                    'location': transaction_data.get('location'),
+                    'channel': transaction_data.get('channel'),
+                    'tranx_type': transaction_data.get('tranx_type')
+                }
+                ai_resp = lambda_client.invoke(
+                    FunctionName=AI_CLASSIFY_LAMBDA,
+                    InvocationType='RequestResponse',
+                    Payload=json.dumps(ai_payload)
+                )
+                ai_resp_body = json.loads(ai_resp['Payload'].read())
+                ai_status = ai_resp_body.get('statusCode')
+                ai_body = json.loads(ai_resp_body.get('body', '{}')) if 'body' in ai_resp_body else ai_resp_body
+                category_label = ai_body.get('jar')
+
+                if ai_status == 200 and category_label:
+                    step_result['steps'].append({
+                        'step': 'ai_classify',
+                        'status': 'success',
+                        'category_label': category_label,
+                        'response': ai_body
+                    })
+                else:
+                    step_result['steps'].append({'step': 'ai_classify', 'status': 'failed', 'response': ai_body})
+                    notify_transaction_event(user_id, "Phân loại thất bại", "Không thể phân loại giao dịch. Bạn có thể phân loại thủ công.", "classify", "warning", transaction_id)
+                    results.append(step_result)
+                    continue
+            except Exception as e:
+                logger.error(f"AI classify failed: {e}")
+                step_result['steps'].append({'step': 'ai_classify', 'status': 'failed', 'error': str(e)})
+                notify_transaction_event(user_id, "Phân loại thất bại", "Hệ thống gặp lỗi khi phân loại giao dịch.", "classify", "error", transaction_id)
+                results.append(step_result)
+                continue
+
+            # 3. Classify Transaction
+            try:
+                classify_payload = {
+                    'pathParameters': {'id': transaction_id},
+                    'body': json.dumps({'user_id': user_id, 'category_label': category_label}),
+                    'httpMethod': 'PATCH',
+                    'path': f'/transaction/{transaction_id}/classify'
+                }
+                classify_resp = lambda_client.invoke(
+                    FunctionName=CRUD_TRANSACTION_LAMBDA,
+                    InvocationType='RequestResponse',
+                    Payload=json.dumps(classify_payload)
+                )
+                classify_resp_body = json.loads(classify_resp['Payload'].read())
+                classify_status = classify_resp_body.get('statusCode')
+                classify_body = json.loads(classify_resp_body.get('body', '{}'))
+
+                if classify_status == 200:
+                    step_result['steps'].append({
+                        'step': 'classify_transaction',
+                        'status': 'success',
+                        'response': classify_body
+                    })
+                    notify_transaction_event(user_id, "Phân loại giao dịch", f"Giao dịch đã được phân loại là {category_label}. Bạn có muốn thay đổi không?", "classify", "info", transaction_id)
+                else:
+                    step_result['steps'].append({'step': 'classify_transaction', 'status': 'failed', 'response': classify_body})
+                    notify_transaction_event(user_id, "Phân loại thất bại", "Không thể ghi nhận phân loại giao dịch.", "classify", "error", transaction_id)
+                    results.append(step_result)
+                    continue
+            except Exception as e:
+                logger.error(f"Classify transaction failed: {e}")
+                step_result['steps'].append({'step': 'classify_transaction', 'status': 'failed', 'error': str(e)})
+                notify_transaction_event(user_id, "Phân loại thất bại", "Không thể phân loại giao dịch. Vui lòng thử lại.", "classify", "error", transaction_id)
+                results.append(step_result)
+                continue
+
+            # 4. Update Jar
+            try:
+                update_jar_payload = {
+                    "body": json.dumps({
+                        "action": "update_jar_amount",
+                        "user_id": user_id,
+                        "amount": transaction_data.get('amount'),
+                        "tranx_type": transaction_data.get('tranx_type'),
+                        "category_label": category_label
+                    }),
+                    "httpMethod": "POST",
+                    "path": "/jar/update_budget"
+                }
+                jar_resp = lambda_client.invoke(
+                    FunctionName=CRUD_JAR_LAMBDA,
+                    InvocationType='RequestResponse',
+                    Payload=json.dumps(update_jar_payload)
+                )
+
+                jar_resp_body = json.loads(jar_resp['Payload'].read())
+                update_status = jar_resp_body.get('statusCode', 500)
+
+                step_result['steps'].append({
+                    'step': 'update_jar_amount',
+                    'status': 'success' if update_status == 200 else 'failed',
+                    'response': jar_resp_body.get('body')
+                })
+
+                if update_status != 200:
+                    notify_transaction_event(user_id, "Cập nhật hũ thất bại", "Không thể cập nhật số tiền vào hũ. Vui lòng kiểm tra lại.", "jar", "warning", transaction_id)
+            except Exception as e:
+                logger.error(f"Update jar after classify failed: {e}")
+                step_result['steps'].append({'step': 'update_jar_amount', 'status': 'failed', 'error': str(e)})
+                notify_transaction_event(user_id, "Cập nhật hũ thất bại", "Hệ thống gặp lỗi khi cập nhật hũ.", "jar", "error", transaction_id)
+
+            results.append(step_result)
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps({'results': results}, ensure_ascii=False)
+    }

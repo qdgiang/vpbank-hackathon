@@ -24,21 +24,23 @@ def get_db_connection():
         cursorclass=pymysql.cursors.DictCursor
     )
 
+def user_exists(user_id):
+    conn = get_db_connection()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM users WHERE user_id = %s", (user_id,))
+            return cursor.fetchone() is not None
+
 def handler(event, context):
     path = event.get('path')
     method = event.get('httpMethod')
-
     try:
-        if path == "/transactions" and method == "GET":
-            return get_transactions(event)
-        elif path.startswith("/transactions/") and method == "GET":
-            return get_transaction_by_id(event)
-        elif path == "/transactions" and method == "POST":
-            return create_transaction(event)
-        elif path.startswith("/transactions/") and method == "PUT":
-            return update_transaction(event)
-        elif path.startswith("/transactions/") and method == "DELETE":
-            return delete_transaction(event)
+        if path == "/notification/search" and method == "POST":
+            return search_notifications(event)
+        elif path == "/notification/create" and method == "POST":
+            return create_notification(event)
+        elif path and path.startswith("/notification/") and path.endswith("/status") and method == "PATCH":
+            return mark_notification_status(event)
         else:
             return response(404, {"error": "Not Found"})
     except Exception as e:
@@ -46,113 +48,104 @@ def handler(event, context):
         return response(500, {"error": str(e)})
 
 # ---------------------- API Handlers ----------------------
-
-def get_transactions(event):
-    user_id = event['queryStringParameters'].get('user_id')
+def search_notifications(event):
+    body = json.loads(event.get('body', '{}'))
+    user_id = body.get('user_id')
+    pagination = body.get('pagination', {})
+    filters = body.get('filters', {})
     if not user_id:
         return response(400, {"error": "user_id is required"})
-
+    if not user_exists(user_id):
+        return response(404, {"error": "User not found"})
+    page_size = pagination.get('page_size', 20)
+    current = pagination.get('current', 1)
+    offset = (current - 1) * page_size
+    # Build query for data
+    query = "SELECT * FROM notifications WHERE user_id = %s"
+    params = [user_id]
+    # Build query for count
+    count_query = "SELECT COUNT(*) as total FROM notifications WHERE user_id = %s"
+    count_params = [user_id]
+    if filters.get('status'):
+        query += " AND status = %s"
+        params.append(filters['status'])
+        count_query += " AND status = %s"
+        count_params.append(filters['status'])
+    if filters.get('object_code'):
+        query += " AND object_code = %s"
+        params.append(filters['object_code'])
+        count_query += " AND object_code = %s"
+        count_params.append(filters['object_code'])
+    if filters.get('from_date'):
+        query += " AND created_at >= %s"
+        params.append(filters['from_date'])
+        count_query += " AND created_at >= %s"
+        count_params.append(filters['from_date'])
+    if filters.get('to_date'):
+        query += " AND created_at <= %s"
+        params.append(filters['to_date'])
+        count_query += " AND created_at <= %s"
+        count_params.append(filters['to_date'])
+    query += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
+    params.extend([page_size, offset])
     conn = get_db_connection()
     with conn:
         with conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT * FROM transactions
-                WHERE user_id = %s
-                ORDER BY txn_time DESC
-            """, (user_id,))
+            cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
-    return response(200, {"transactions": rows})
+            cursor.execute(count_query, tuple(count_params))
+            total = cursor.fetchone()['total']
+    return response(200, {"notifications": rows, "total": total})
 
-def get_transaction_by_id(event):
-    transaction_id = event['pathParameters']['id']
-
-    conn = get_db_connection()
-    with conn:
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT * FROM transactions WHERE transaction_id = %s
-            """, (transaction_id,))
-            row = cursor.fetchone()
-
-    if not row:
-        return response(404, {"error": "Transaction not found"})
-    return response(200, row)
-
-def create_transaction(event):
+def create_notification(event):
     body = json.loads(event.get('body', '{}'))
-    required_fields = ['user_id', 'amount', 'txn_time']
+    required_fields = ['user_id', 'title', 'message', 'notification_type', 'severity', 'object_code', 'object_id']
     for field in required_fields:
         if not body.get(field):
             return response(400, {"error": f"{field} is required"})
-
+    user_id = body['user_id']
+    if not user_exists(user_id):
+        return response(404, {"error": "User not found"})
     import uuid
-    transaction_id = str(uuid.uuid4())
-
+    notification_id = str(uuid.uuid4())
     conn = get_db_connection()
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO transactions (
-                    transaction_id, user_id, amount, txn_time, msg_content,
-                    merchant, to_account_name, location, channel,
-                    tranx_type, category_label, is_manual_override,
-                    created_at, updated_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+                INSERT INTO notifications (
+                    notification_id, user_id, title, message, notification_type, severity, object_code, object_id, status, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
             """, (
-                transaction_id,
-                body['user_id'],
-                body['amount'],
-                body['txn_time'],
-                body.get('msg_content'),
-                body.get('merchant'),
-                body.get('to_account_name'),
-                body.get('location'),
-                body.get('channel'),
-                body.get('tranx_type'),
-                body.get('category_label'),
-                body.get('is_manual_override', False)
+                notification_id,
+                user_id,
+                body['title'],
+                body['message'],
+                body['notification_type'],
+                body['severity'],
+                body['object_code'],
+                body['object_id'],
+                body.get('status', 'unread')
             ))
         conn.commit()
+    return response(201, {"message": "Notification created", "notification_id": notification_id})
 
-    return response(201, {"message": "Transaction created", "transaction_id": transaction_id})
-
-def update_transaction(event):
-    transaction_id = event['pathParameters']['id']
+def mark_notification_status(event):
+    # PATCH /notification/:id/status
+    path = event.get('path')
+    notification_id = path.split("/")[2] if path else None
     body = json.loads(event.get('body', '{}'))
-
-    if not body:
-        return response(400, {"error": "Empty update payload"})
-
-    fields = []
-    values = []
-    for key in ["category_label", "tranx_type", "merchant", "is_manual_override"]:
-        if key in body:
-            fields.append(f"{key} = %s")
-            values.append(body[key])
-    if not fields:
-        return response(400, {"error": "No valid fields to update"})
-
-    values.append(transaction_id)
-
+    user_id = body.get('user_id')
+    status = body.get('status')
+    if not notification_id or not user_id or not status:
+        return response(400, {"error": "notification_id, user_id, and status are required"})
+    if not user_exists(user_id):
+        return response(404, {"error": "User not found"})
     conn = get_db_connection()
     with conn:
         with conn.cursor() as cursor:
-            cursor.execute(f"""
-                UPDATE transactions
-                SET {', '.join(fields)}, updated_at = NOW()
-                WHERE transaction_id = %s
-            """, values)
+            cursor.execute("""
+                UPDATE notifications SET status = %s
+                WHERE notification_id = %s AND user_id = %s
+            """, (status, notification_id, user_id))
         conn.commit()
-
-    return response(200, {"message": "Transaction updated"})
-
-def delete_transaction(event):
-    transaction_id = event['pathParameters']['id']
-
-    conn = get_db_connection()
-    with conn:
-        with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM transactions WHERE transaction_id = %s", (transaction_id,))
-        conn.commit()
-
-    return response(200, {"message": "Transaction deleted"})
+    return response(200, {"message": "Notification status updated"})

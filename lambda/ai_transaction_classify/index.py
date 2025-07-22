@@ -43,6 +43,7 @@ LABEL_VIETNAMESE = {
     "FFA": "Tự do tài chính",
     "EDU": "Giáo dục",
     "PLY": "Giải trí"
+
 }
 
 TRANX_TYPE_TO_LABEL = {
@@ -50,6 +51,7 @@ TRANX_TYPE_TO_LABEL = {
     "loan_repayment": "NEC",       # Trừ tiền tự động trả khoản vay
     "stock": "FFA",                # Mua/bán cổ phiếu
     "bill_payment": "NEC",         # Thanh toán điện, nước, mạng
+
     "opensaving": "GIV",          # Mở tài khoản tiết kiệm linh hoạt (cho đi/tương lai)
     "opendeposit": "LTSS",         # Gửi tiết kiệm có kỳ hạn
     "openaccumulation": "LTSS",    # Kế hoạch tích lũy định kỳ
@@ -105,6 +107,7 @@ def _embed_user(user_id):
         logger.warning(f"No record found for user {uid}")
         vec = np.zeros(USER_EMBED_DIM, dtype=np.float32)
     print(f"[DEBUG] vec shape: {np.shape(vec)}")
+
     csv_vec = ",".join(f"{x:.6g}" for x in vec)
     return csv_vec
 
@@ -126,6 +129,7 @@ def _detect_label(text_joined: str) -> Optional[str]:
 
 def _classify_using_ML(payload, endpoint_name="transaction-classifier-serverless-endpoint-v1"):
     print('--- Calling SageMaker endpoint')
+
     resp = sagemaker_runtime.invoke_endpoint(
             EndpointName=endpoint_name,
             ContentType="application/json",

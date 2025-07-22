@@ -96,7 +96,7 @@ resource "aws_ecs_service" "vpbank_server" {
   name            = "${var.project_name}-server"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.vpbank_server.arn
-  desired_count   = 1
+  desired_count   = 2
   launch_type     = "FARGATE"
 
   network_configuration {

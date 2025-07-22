@@ -117,7 +117,7 @@ variable "python_runtime" {
 variable "lambda_timeout" {
   description = "Default timeout for Lambda functions in seconds"
   type        = number
-  default     = 30
+  default     = 60
 }
 
 variable "lambda_memory_size" {

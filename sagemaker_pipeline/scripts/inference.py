@@ -19,6 +19,7 @@ SELECTED_FEATURES = ["amount_scaled", "day_of_month", "is_weekend", "hour_sin", 
                      "dow_sin", "dow_cos", "tranx_type_atm_withdrawal", "tranx_type_qrcode_payment",
                      "tranx_type_transfer_out", "channel_MOBILE", "channel_WEB"]
 
+
 FEATURE_GROUP_NAME = "user-embeddings"
 EMBED_DIM          = 384
 USER_EMBED_DIM     = 64
@@ -28,6 +29,7 @@ fs_runtime = boto3.client(
     "sagemaker-featurestore-runtime",
     region_name='ap-southeast-2'
 )
+
 
 # ---------- HELPER FUNCTIONS -----------------
 _ARTIFACTS = {}
@@ -77,6 +79,7 @@ def _get_struct_features(features):
 
     le = artefacts['loc_enc']
     features['location_idx'] = le.transform(features['location'])
+
     return features
 
 
@@ -166,7 +169,7 @@ def output_handler(data, context):
     """
     if data.status_code != 200:
         raise ValueError(data.content.decode('utf-8'))
-
     response_content_type = context.accept_header
     prediction = data.content
     return prediction, response_content_type
+
