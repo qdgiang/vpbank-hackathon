@@ -12,8 +12,8 @@ _SPECIAL_TYPES = {"qrcode_payment", "transfer_out", "atm_withdrawal"}
 
 _KEYWORDS: Dict[str, List[str]] = {
     "NEC":  ["grab", "cho", "sieu thi", "taxi", "an uong", "an nuong", "di cho"],
-    "PLAY": ["netflix", "spotify", "game", "cinema", "rap phim", "tiktok", "cgv", "galaxy"],
-    "GIVE": ["tu thien", "thien nguyen", "ung ho", "donate", "charity", "quy"],
+    "PLY": ["netflix", "spotify", "game", "cinema", "rap phim", "tiktok", "cgv", "galaxy"],
+    "GIV": ["tu thien", "thien nguyen", "ung ho", "donate", "charity", "quy"],
     "EDU":  ["hoc phi", "khoa hoc", "sach", "book", "education", "course", "udemy", "coursera"],
     "LTSS": ["tiet kiem", "mua nha", "mua nha", "mua xe", "mua xe"],
     "FFA":  ["chung khoan", "chungkhoan", "crypto", "investment", "vang", "stock", "securities"],
@@ -38,11 +38,12 @@ TRANX_TYPE_VIETNAMESE = {
 
 LABEL_VIETNAMESE = {
     "NEC": "Nhu cầu thiết yếu",
-    "GIVE": "Cho đi / Tương lai",
+    "GIV": "Cho đi / Tương lai",
     "LTSS": "Tiết kiệm dài hạn",
     "FFA": "Tự do tài chính",
     "EDU": "Giáo dục",
-    "PLAY": "Giải trí"
+    "PLY": "Giải trí"
+
 }
 
 TRANX_TYPE_TO_LABEL = {
@@ -50,7 +51,8 @@ TRANX_TYPE_TO_LABEL = {
     "loan_repayment": "NEC",       # Trừ tiền tự động trả khoản vay
     "stock": "FFA",                # Mua/bán cổ phiếu
     "bill_payment": "NEC",         # Thanh toán điện, nước, mạng
-    "opensaving": "GIVE",          # Mở tài khoản tiết kiệm linh hoạt (cho đi/tương lai)
+
+    "opensaving": "GIV",          # Mở tài khoản tiết kiệm linh hoạt (cho đi/tương lai)
     "opendeposit": "LTSS",         # Gửi tiết kiệm có kỳ hạn
     "openaccumulation": "LTSS",    # Kế hoạch tích lũy định kỳ
     "mobile_topup": "NEC"          # Nạp điện thoại
@@ -61,10 +63,12 @@ TRANX_TYPE_TO_LABEL = {
 session = boto3.Session(region_name="ap-southeast-2")
 s3 = session.client("s3")
 sagemaker_runtime = session.client("sagemaker-runtime")
+fs_runtime = session.client("sagemaker-featurestore-runtime")
 
-
+USER_EMBED_DIM = 64
 # --- HELPER FUNCTIONS ---
-def embed_sentence(text: str, endpoint_name="sentence-embed-endpoint-v1") -> list[float]:
+def _embed_sentence(text: str, endpoint_name="sentence-embed-endpoint-v1") -> list[float]:
+    print('-- Calling text-embedding model endpoint ')
     payload = json.dumps({"inputs": [text]})
     resp = sagemaker_runtime.invoke_endpoint(
         EndpointName=endpoint_name,
@@ -73,6 +77,37 @@ def embed_sentence(text: str, endpoint_name="sentence-embed-endpoint-v1") -> lis
     )
     raw = json.loads(resp["Body"].read())[0][0]
     vec = np.mean(raw, axis=0).tolist()  # Mean-pooling over token embeddings
+    print(f"[DEBUG] vec shape: {np.shape(vec)}")
+    csv_vec = ",".join(f"{x:.6g}" for x in vec)
+    return csv_vec
+
+def _embed_user(user_id):
+    print('-- Getting user_embed from feature-store')
+    record_identifier_value = user_id
+    try:
+        record = fs_runtime.get_record(
+            FeatureGroupName="user-embeddings",
+            RecordIdentifierValueAsString=record_identifier_value,
+            FeatureNames=["embedding"]
+        )
+    except Exception as e:
+        print(f"Error when get record from feature-store {record_identifier_value}: {e}")
+
+    if record.get('Record'):
+        for item in record['Record']:
+            if item['FeatureName'] == 'embedding':
+                raw = item['ValueAsString']
+                raw = raw.strip("[]")
+                vec = np.fromstring(raw, sep=",", dtype=np.float32)
+                print(f"User embedding len: {vec.size}")
+                if vec.size != USER_EMBED_DIM:
+                    logger.warning(f"Bad length ({vec.size}) for user {uid}")
+                    vec = np.zeros(USER_EMBED_DIM, dtype=np.float32)
+    else:
+        logger.warning(f"No record found for user {uid}")
+        vec = np.zeros(USER_EMBED_DIM, dtype=np.float32)
+    print(f"[DEBUG] vec shape: {np.shape(vec)}")
+
     csv_vec = ",".join(f"{x:.6g}" for x in vec)
     return csv_vec
 
@@ -87,20 +122,21 @@ def _detect_label(text_joined: str) -> Optional[str]:
     """Trả về label match đầu tiên (dựa theo thứ tự trong _KEYWORDS)."""
     for label, kw_list in _KEYWORDS.items():
         for kw in kw_list:
-            print(f'keyword: {kw} - text_joined: {text_joined}')
             if kw in text_joined:
                 return label
     return None
 
 
-def _classify_using_ML(payload, endpoint_name="txn-classifier-endpoint-v1"):
+def _classify_using_ML(payload, endpoint_name="transaction-classifier-serverless-endpoint-v1"):
+    print('--- Calling SageMaker endpoint')
+
     resp = sagemaker_runtime.invoke_endpoint(
             EndpointName=endpoint_name,
             ContentType="application/json",
             Body=json.dumps(payload)
     )
     body_str = resp["Body"].read().decode()
-    preds = json.loads(body_str)
+    preds = json.loads(body_str)['predictions'][0]
     label_idx = int(np.argmax(preds))
     prob = float(np.max(preds))
 
@@ -108,6 +144,7 @@ def _classify_using_ML(payload, endpoint_name="txn-classifier-endpoint-v1"):
     LABELS = ["NEC", "FFA", "PLAY", "EDU", "GIVE", "LTSS"]
     predicted_label = LABELS[label_idx]
 
+    print(f'Predicted result: {predicted_label} - {prob}')
     return {
         "predicted_label": predicted_label,
         "probability": prob
@@ -131,11 +168,12 @@ def handler(event, context):
         msg_content = event.get("msg_content", "").lower()
         merchant = event.get("merchant", "").lower()
         to_account_name = event.get("to_account_name", "").lower()
-        location = event.get("location", "Hà Nội").lower()
+        location = event.get("location", "Hà Nội")
         channel = event.get("channel", "MOBILE")
-        tranx_type = event.get("tranx_type", "transfer_out").lower()
+        tranx_type = event.get("tranx_type", "transfer_out")
 
         # 1. Classify by tranx_type
+        print('Checking tranx_type ...')
         if tranx_type not in _SPECIAL_TYPES:
             response_msg = (
                 f"Chúng tôi phân loại giao dịch dựa trên loại giao dịch: '{TRANX_TYPE_VIETNAMESE[tranx_type]}'. \n Nếu bạn muốn chỉnh sửa, hãy phản hồi nhé!"
@@ -148,6 +186,7 @@ def handler(event, context):
             return response(200, body)
 
         # 2. Classify by keywords
+        print('Checking key words ...')
         text_joined = " ".join(
             filter(
                 None,
@@ -171,11 +210,13 @@ def handler(event, context):
             return response(200, body)
 
         # 3. Keyword not found -> Call ML <dev...>
+        print('Call ML ...')
         joined_text = " ".join([s or "" for s in (msg_content, merchant, to_account_name)])
-        joined_text = re.sub(r"\s+", " ", joined).strip()
-        sentence_embedding = embed_sentence(joined_text)
+        joined_text = re.sub(r"\s+", " ", joined_text).strip()
+        sentence_embedding = _embed_sentence(joined_text)
+        user_embed = _embed_user(user_id)
         payload = {
-            "user_id": user_id,
+            "transaction_id": transaction_id,
             "amount": amount,
             "txn_time": txn_time,
             "msg_content": msg_content,
@@ -184,12 +225,15 @@ def handler(event, context):
             "location": location,
             "channel": channel,
             "tranx_type": tranx_type,
+            "user_embedding": user_embed,
             "sentence_embedding": sentence_embedding
         }
-        #jar = _classify_using_ML(payload)
+        ml_resp = _classify_using_ML(payload)
+        jar = ml_resp['predicted_label']
+
         body = {
             "transaction_id": transaction_id,
-            "jar": 'NEC',
+            "jar": jar,
             "response_msg": 'Hệ thống dùng AI để phân loại, bạn có muốn thay đổi?',
         }
         return response(200, body)
