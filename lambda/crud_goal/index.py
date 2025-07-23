@@ -153,7 +153,7 @@ def get_goals(event):
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM goal_setting
+                SELECT * FROM saving_goals
                 WHERE user_id = %s
                 ORDER BY created_at DESC
             """, (user_id,))
@@ -167,7 +167,7 @@ def get_goal_by_id(event):
     with conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM goal_setting WHERE goal_id = %s
+                SELECT * FROM saving_goals WHERE goal_id = %s
             """, (goal_id,))
             row = cursor.fetchone()
 
@@ -286,7 +286,7 @@ def set_goal(user_id, data):
                 "month_req": float(month_req),
                 "weight": float(weight)
             })
-        start_date = date.today().replace(day=1)
+        start_date = datetime.today().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         for g in unlocked:
             gid = g['goal_id']
             tgt_amt = Decimal(g['target_amount'])
