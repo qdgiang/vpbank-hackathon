@@ -58,7 +58,7 @@ export const pauseGoal = async (goal_id) =>
     api.put(`${apiConfig.goals}/pause/${goal_id}`);
 
 export const deleteGoal = async (goal_id) =>
-    api.delete(`${apiConfig.goals}/delete/${goal_id}`);
+    api.delete(`${apiConfig.goals}/${goal_id}`);
 // Jars
 export const fetchJars = async () => api.get(apiConfig.jars);
 export const createJar = async (data) => api.post(apiConfig.jars, data);

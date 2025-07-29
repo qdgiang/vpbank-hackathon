@@ -143,23 +143,26 @@ function NotificationItem({ noti, transactions, onRead, onDelete }) {
 const NotificationCenter = ({ transactions }) => {
   const dispatch = useDispatch();
   const { notifications, loading } = useSelector(state => state.notifications);
+  const user_id = useSelector(state => state.auth.user?.user_id); // adjust if user_id is elsewhere
+  const [showNewNotiAlert, setShowNewNotiAlert] = useState(false);
   // --- Polling state ---
   const [polledNotifications, setPolledNotifications] = useState([]);
   const [lastSeenTime, setLastSeenTime] = useState(null);
   const intervalRef = useRef();
-  const user_id = useSelector(state => state.auth.user?.user_id); // adjust if user_id is elsewhere
-  const [showNewNotiAlert, setShowNewNotiAlert] = useState(false);
-  const [lastNotiId, setLastNotiId] = useState(null);
 
-  // --- Polling fetchNotifications every 10s, only append new notifications by id ---
+  // --- Polling fetchNotifications every 3s ---
   useEffect(() => {
     if (!user_id) return;
+
+    const token = localStorage.getItem('token');
+
     function fetchNotifications() {
-      const token = localStorage.getItem('token');
+      const fromDate = localStorage.getItem('last_seen_time');
       const body = {
         pagination: { page_size: 20, current: 1 },
-        filters: lastSeenTime ? { from_date: lastSeenTime, status: 0 } : {status: 0}
+        filters: fromDate ? { from_date: fromDate, status: 0 } : { status: 0 }
       };
+
       fetch('/api/v1/notification/search', {
         method: 'POST',
         headers: {
@@ -168,33 +171,87 @@ const NotificationCenter = ({ transactions }) => {
         },
         body: JSON.stringify(body)
       })
-      .then(res => res.json())
-      .then(data => {
-        data.notifications = data.notifications.sort((a, b) => b.notification_id - a.notification_id)
-        if (data.notifications && data.notifications.length > 0) {
-          setPolledNotifications(prev => {
-            // Only append notifications with new id
-            const existingIds = new Set(prev.map(n => n.notification_id));
-            const newNotis = data.notifications.filter(n => !existingIds.has(n.notification_id));
-            return [...newNotis, ...prev];
-          });
-          setLastSeenTime(data.notifications[0].created_at);
-          localStorage.setItem('last_seen_time', data.notifications[0].created_at);
-          // Nếu có noti classify thì fetch lại transactions
-          const newClassifyNoti = data.notifications[0].notification_type === 'classify' && data.notifications[0].status === 0;
-          if (newClassifyNoti) {
-            dispatch(fetchTransactionsData());
-          }
-        }
-      });
-    }
-    fetchNotifications();
-    intervalRef.current = setInterval(fetchNotifications, 10000); // 10s polling
-    return () => clearInterval(intervalRef.current);
-  }, [user_id, lastSeenTime]);
+          .then(res => res.json())
+          .then(data => {
+            if (!Array.isArray(data.notifications)) return;
 
-  // Merge polledNotifications with Redux notifications (avoid duplicates)
-  const mergedNotifications = [...polledNotifications, ...notifications.filter(n => !polledNotifications.some(pn => pn.notification_id === n.notification_id))];
+            // Sort notis theo thời gian mới nhất
+            const sorted = data.notifications.sort(
+                (a, b) => new Date(b.created_at) - new Date(a.created_at)
+            );
+
+            if (sorted.length > 0) {
+              setPolledNotifications(prev => {
+                const existingIds = new Set(prev.map(n => n.notification_id));
+                const newNotis = sorted.filter(n =>
+                    !existingIds.has(n.notification_id) &&
+                    (!lastSeenTime || new Date(n.created_at) > new Date(lastSeenTime))
+                );
+
+                const latestCreatedAt = newNotis[0].created_at;
+                setLastSeenTime(latestCreatedAt);
+                localStorage.setItem('last_seen_time', latestCreatedAt);
+
+                const newClassifyNoti = newNotis.find(n =>
+                    n.notification_type === 'transaction' && n.status === 0
+                );
+                if (newClassifyNoti) {
+                  dispatch(fetchTransactionsData());
+                  playNotificationSound();
+                }
+                return [...newNotis, ...prev];
+              });
+            }
+          })
+          .catch(console.error);
+    }
+
+    function startPolling() {
+      if (!intervalRef.current) {
+        fetchNotifications();
+        intervalRef.current = setInterval(fetchNotifications, 3000);
+      }
+    }
+
+    function stopPolling() {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startPolling();
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user_id]);
+
+  function playNotificationSound() {
+    const audio = new Audio('/notification.mp3'); // đường dẫn tới public folder
+    audio.play().catch(err => {
+      console.warn("Cannot play sound:", err);
+    });
+  }
+
+
+  //  Merge polledNotifications + Redux notifications (tránh trùng)
+  const mergedNotifications = [
+    ...polledNotifications,
+    ...notifications.filter(
+        n => !polledNotifications.some(pn => pn.notification_id === n.notification_id)
+    )
+  ];
 
   // Remove tab and type filter
   const [viewAllOpen, setViewAllOpen] = useState(false);

@@ -42,22 +42,56 @@ import TransactionManagementCard from '../../components/TransactionManagementCar
 import ChatSession from '../../components/ChatSession';
 import { setUser } from '../../store/authSlice';
 
-const DEFAULT_USER = {
-  user_id: "000b1dd0-c880-45fd-8515-48dd705a3aa2",
-  email: "justin42@example.org",
-  hash_pwd: null,
-  phone: "001-585-307-9419",
-  identity_number: null,
-  full_name: "Võ Ngọc Huyền",
-  gender: null,
-  date_of_birth: "1993-05-24",
-  status: 0,
-  timezone: "Asia/Ho_Chi_Minh",
-  city: "TP HCM",
-  created_at: "2020-11-04 07:44:59",
-  updated_at: "2021-06-02 07:44:59",
-  is_active: 1
-};
+const DEFAULT_USERS = [
+  {
+    "user_id": "000f71d5-45ef-4cb3-9b3c-45d296c13dd1",
+    "email": "stonevalerie@example.org",
+    "hash_pwd": null,
+    "phone": "6054320648",
+    "identity_number": null,
+    "full_name": "Bu00f9i u0110u1ee9c Phu00fac",
+    "gender": null,
+    "date_of_birth": "1994-04-24",
+    "status": 0,
+    "timezone": "Asia/Ho_Chi_Minh",
+    "city": "Huu1ebf",
+    "created_at": "2023-06-14 00:33:00",
+    "updated_at": "2023-10-23 00:33:00",
+    "is_active": 1
+  },
+  {
+    "user_id": "001c1be3-35a2-45df-a959-813c46f58a45",
+    "email": "timothy14@example.net",
+    "hash_pwd": null,
+    "phone": "(930)744-8973",
+    "identity_number": null,
+    "full_name": "Nguyu1ec5n Hu1eefu Vu00e2n",
+    "gender": null,
+    "date_of_birth": "1965-11-26",
+    "status": 0,
+    "timezone": "Asia/Ho_Chi_Minh",
+    "city": "TP HCM",
+    "created_at": "2024-03-12 16:27:22",
+    "updated_at": "2024-11-30 16:27:22",
+    "is_active": 1
+  },
+  {
+    "user_id": "000b1dd0-c880-45fd-8515-48dd705a3aa2",
+    "email": "justin42@example.org",
+    "hash_pwd": null,
+    "phone": "001-585-307-9419",
+    "identity_number": null,
+    "full_name": "Võ Ngọc Huyền",
+    "gender": null,
+    "date_of_birth": "1993-05-24",
+    "status": 0,
+    "timezone": "Asia/Ho_Chi_Minh",
+    "city": "TP HCM",
+    "created_at": "2020-11-04 07:44:59",
+    "updated_at": "2021-06-02 07:44:59",
+    "is_active": 1
+  }
+]
 
 const DemoDashboard = () => {
   const pieChartRef = useRef(null);
@@ -173,8 +207,9 @@ const DemoDashboard = () => {
   }, [dispatch]);
 
   useEffect(() => {
+    console.log(user)
     if (!user || !user.user_id) {
-      dispatch(setUser(DEFAULT_USER));
+      dispatch(setUser(DEFAULT_USERS[0]));
     }
   }, [user, dispatch]);
 
@@ -815,7 +850,7 @@ const DemoDashboard = () => {
                 </motion.div>
                 <motion.div variants={itemVariants}>
                   <Box sx={{ borderRadius: 4, boxShadow: '0 2px 12px #0001' }}>
-                    <GoalSettings goals={goals} />
+                    <GoalSettings goals={goals} ltss={jars.find(jar => jar.jar_code === 'LTSS')} />
                   </Box>
                 </motion.div>
                 <motion.div variants={itemVariants}>

@@ -14,7 +14,7 @@ import {
   Tooltip,
   Dialog,
   DialogTitle,
-  DialogContent
+  DialogContent, LinearProgress
 } from '@mui/material';
 import { Edit, Save, Cancel, Percent } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -32,7 +32,7 @@ const defaultJars = [
 
 const JarSettings = () => {
   const dispatch = useDispatch();
-  const { jars: apiJars, loading } = useSelector(state => state.jars);
+  const { jars: apiJars } = useSelector(state => state.jars);
   const [editing, setEditing] = useState(false);
   const [tempJars, setTempJars] = useState(defaultJars);
   const [totalPercentage, setTotalPercentage] = useState(100);
@@ -40,6 +40,7 @@ const JarSettings = () => {
   const [income, setIncome] = useState(0);
   const [aiJarResult, setAiJarResult] = useState(null);
   const [aiJarDialogOpen, setAiJarDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Map API jars vào defaultJars để render đúng UI
   const mergedJars = defaultJars.map(jar => {
@@ -137,16 +138,6 @@ const JarSettings = () => {
     setTempJars(mergedJars);
     setEditing(false);
     setError('');
-  };
-
-  const handleAddJar = (data) => {
-    dispatch(createJarData(data));
-  };
-  const handleEditJar = (id, data) => {
-    dispatch(updateJarData({ id, data }));
-  };
-  const handleDeleteJar = (id) => {
-    dispatch(deleteJarData(id));
   };
 
   const getStatusColor = () => {
@@ -318,6 +309,7 @@ const JarSettings = () => {
           color="secondary"
           onClick={async () => {
             try {
+              setLoading(true)
               const token = localStorage.getItem('token');
               const res = await fetch('/api/v1/ai/jar/coaching', {
                 method: 'POST',
@@ -329,15 +321,18 @@ const JarSettings = () => {
               const data = await res.json();
               setAiJarResult(data);
               setAiJarDialogOpen(true);
+              setLoading(false)
             } catch (err) {
               setAiJarResult({ error: 'AI Jar Coaching call failed' });
               setAiJarDialogOpen(true);
+              setLoading(false)
             }
           }}
         >
           Demo AI Jar Coaching
         </Button>
       </Box>
+      {loading ? <LinearProgress /> : null}
       <Dialog open={aiJarDialogOpen} onClose={() => setAiJarDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>AI Jar Coaching Result</DialogTitle>
         <DialogContent>

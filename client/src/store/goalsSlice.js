@@ -75,11 +75,27 @@ const goalsSlice = createSlice({
                 state.error = action.payload;
                 state.loading = false;
             })
+            .addCase(createGoalsBatchThunk.pending, (state, action) => {
+                state.loading = true;
+            })
             .addCase(createGoalsBatchThunk.fulfilled, (state, action) => {
                 state.goals.unshift(...(action.payload?.goals || []));
+                state.loading = false;
+            })
+            .addCase(createGoalsBatchThunk.rejected, (state, action) => {
+                state.error = action.payload;
+                state.loading = false;
+            })
+            .addCase(deleteGoalThunk.pending, (state, action) => {
+                state.loading = true;
             })
             .addCase(deleteGoalThunk.fulfilled, (state, action) => {
                 state.goals = state.goals.filter(g => g.goal_id !== action.payload);
+                state.loading = false;
+            })
+            .addCase(deleteGoalThunk.rejected, (state, action) => {
+                state.error = action.payload;
+                state.loading = false;
             })
             .addCase(pauseGoalThunk.fulfilled, (state, action) => {
                 const idx = state.goals.findIndex(g => g.goal_id === action.payload.goal_id);

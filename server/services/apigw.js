@@ -43,7 +43,7 @@ exports.goalPause = (data, token) =>
     }).then(res => res.data);
 // DELETE /goal/:goal_id
 exports.goalRemove = (data, token) =>
-    axios.delete(`${API_GATEWAY_BASE}/goal/${data.goal_id}`, {
+    axios.delete(`${API_GATEWAY_BASE}/goal/delete/${data.goal_id}`, {
       data,
       headers: getAuthHeader(token)
     }).then(res => res.data);
