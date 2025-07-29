@@ -207,8 +207,9 @@ const DemoDashboard = () => {
   }, [dispatch]);
 
   useEffect(() => {
+    console.log(user)
     if (!user || !user.user_id) {
-      dispatch(setUser(DEFAULT_USER[0]));
+      dispatch(setUser(DEFAULT_USERS[0]));
     }
   }, [user, dispatch]);
 
