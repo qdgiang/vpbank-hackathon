@@ -197,7 +197,7 @@ def generate_financial_advice(analysis_results, knowledge_base_id, model_arn):
             retrievalQuery={'text': general_advice},
             retrievalConfiguration={
                 'vectorSearchConfiguration': {
-                    'numberOfResults': 10,
+                    'numberOfResults': 6,
                     'overrideSearchType': 'HYBRID'
                 }
             }
@@ -220,7 +220,7 @@ def generate_financial_advice(analysis_results, knowledge_base_id, model_arn):
             f"2. Naturally select and integrate specific (relevant only) products from the shortlisted <product_info> that can help the user with their goals. For example, if they are behind on a savings goal, suggest a high-yield savings account or a short-term investment product.\n"
             f"3. For each product you recommend, clearly explain WHY it is a good fit for their specific situation and goals mentioned in the <initial_advice>. Be professional, encouraging, and clear.\n"
             f"4. Structure the final output cleanly. Use headings or bullet points if necessary.\n"
-            f"5. For each recommended product, include its “Source URL for reference” (as provided in the retrieved chunks) formatted as a clickable link, and encourage the user to click it for more details.\n\n"
+            f"5. When including any product details, embed its “Source URL for reference” as a clickable link in the recommendation.\n\n"
             f"Assistant:"
         )
         final_advice = _invoke_llm(prompt_step2, model_arn)

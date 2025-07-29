@@ -29,17 +29,12 @@ resource "aws_security_group" "bastion" {
 }
 
 data "aws_ami" "amazon_linux" {
-  most_recent = true
+  most_recent = false
   owners      = ["amazon"]
 
   filter {
-    name   = "name"
-    values = ["al2023-ami-*-x86_64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
+    name   = "image-id"
+    values = ["ami-04ed17de1daa8ddea"]
   }
 }
 

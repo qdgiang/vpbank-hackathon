@@ -1,4 +1,23 @@
-Dưới đây là phần **Chi tiết tính năng** cho file `README.md`, được biên soạn dựa trên nội dung từ tài liệu **SRS Documentation**, mô tả rõ ràng từng tính năng của ứng dụng **SmartJarvis** – theo nhóm tính năng và mức độ ưu tiên (MoSCoW).
+# Folder structure
+
+`client` folder: Store the code for our ReactJs frontend
+
+`server` folder: Implement for ExpressJS backend server
+
+`financial_ai_tuning`: For the AI Jar Coaching key feature
+
+`lambda`: Each folder inside `lambda` folder contains the source code itself as well as setup for the Lambda layer.
+
+`sagemaker_pipeline`: For our SakeMaker models
+
+`sql`: Stores the proposed schema of the RDS
+
+`terraform`: Stores the entire AWS infrastructure. We also implement cloud state management using S3 bucket as storage, and DynamoDB for locking mechanism to ensure that the Terraform state will always stay consistent.
+
+
+
+
+# Key details
 
 ---
 

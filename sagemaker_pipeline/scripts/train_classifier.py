@@ -29,6 +29,9 @@ INPUT_PATH = os.path.join(TRAIN_DIR, "preprocessed_features.csv")
 
 EMBED_DIM = 64
 
+SELECTED_FEATURES = ["amount_scaled", "day_of_month", "is_weekend", "hour_sin", "hour_cos",
+                     "dow_sin", "dow_cos", "tranx_type_atm_withdrawal", "tranx_type_qrcode_payment",
+                     "tranx_type_transfer_out", "channel_MOBILE", "channel_WEB"]
 # -------- PROCESSING FUNCTIONS --------
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -122,21 +125,21 @@ def preprocess_data(args):
     num_classes : int
         The count of unique values in ``y`` (needed for a soft‑max output layer).
     """
-    # Read struct_df & filter transactions
+    # Read struct_df & filter transactions & preprocess features
     df = pd.read_csv(INPUT_PATH)
     df = df[df["user_id"].notna()]
     df = df[df["user_id"].str.lower() != 'nan']
     df = df[df['tranx_type'].isin({'transfer_out', 'qrcode_payment', 'atm_withdrawal'})]
-    cols_to_drop = ['msg_content', 'merchant', 'to_account_name', 'channel', 'location',
-                    'is_manual_override', 'created_at', 'updated_at', 'amount_log', 'hour','dayofweek',
-                    'tranx_type', 'txn_time', 'tranx_type_bill_payment', 'tranx_type_cashback',
-                    'tranx_type_loan_repayment','tranx_type_mobile_topup','tranx_type_opensaving',
-                    'tranx_type_stock','tranx_type_transfer_in', 'text_joined']
-    df = df.drop(cols_to_drop, axis=1)
+
+    df['day_of_month'] = df['day_of_month'] / 31
+    df = df[SELECTED_FEATURES + ["transaction_id", "category_label", "user_id", "sentence_embedding"]]
 
     # Handle text embedding
     df["embedding_list"] = df["sentence_embedding"].apply(json.loads)
-    embedding_df = pd.DataFrame(df["embedding_list"].tolist())
+    embedding_df = pd.DataFrame(
+        df["embedding_list"].tolist(),
+        columns=[f"text_emb_{i}" for i in range(len(df["embedding_list"].iloc[0]))]
+    )
     df = pd.concat([df, embedding_df], axis=1)
     df.drop(columns=["sentence_embedding", "embedding_list"], inplace=True)
 
@@ -169,6 +172,9 @@ def preprocess_data(args):
         df.drop(columns=["transaction_id", "category_label", "user_id"]).values,
         user_embeddings
     ])
+    X = X.astype(np.float32)
+    X[~np.isfinite(X)] = 0  # loại bỏ cả NaN, inf, -inf
+
     y = df["category_label"].to_numpy()
     num_classes = len(np.unique(y))
     logger.info(f"✅ Preprocessed data X - {X.shape}, y - {y.shape} ")
