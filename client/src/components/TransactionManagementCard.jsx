@@ -17,6 +17,7 @@ const ROW_OPTIONS = [10, 20, 50];
 const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
   const dispatch = useDispatch();
   const { transactions, loading, total } = useSelector(state => state.transactions);
+  const user = useSelector(state => state.auth.user);
   // Ensure transactions is always an array
   const safeTransactions = Array.isArray(transactions) ? transactions : (transactions?.transactions || []);
   const [filterText, setFilterText] = useState('');
@@ -325,7 +326,7 @@ const TransactionManagementCard = ({ classifyTransaction, jarList }) => {
                 setFormError('');
                 dispatch(createTransactionData({
                   ...txForm,
-                  user_id: "000b1dd0-c880-45fd-8515-48dd705a3aa2"
+                  user_id: user.user_id
                 }));
                 setOpenTxForm(false);
                 setTxForm({

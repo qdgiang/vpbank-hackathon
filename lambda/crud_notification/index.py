@@ -66,7 +66,7 @@ def search_notifications(event):
     # Build query for count
     count_query = "SELECT COUNT(*) as total FROM notifications WHERE user_id = %s"
     count_params = [user_id]
-    if filters.get('status'):
+    if filters.get('status') in [0, 1]:
         query += " AND status = %s"
         params.append(filters['status'])
         count_query += " AND status = %s"
@@ -77,9 +77,9 @@ def search_notifications(event):
         count_query += " AND object_code = %s"
         count_params.append(filters['object_code'])
     if filters.get('from_date'):
-        query += " AND created_at >= %s"
+        query += " AND created_at > %s"
         params.append(filters['from_date'])
-        count_query += " AND created_at >= %s"
+        count_query += " AND created_at > %s"
         count_params.append(filters['from_date'])
     if filters.get('to_date'):
         query += " AND created_at <= %s"

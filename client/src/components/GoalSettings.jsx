@@ -1,7 +1,21 @@
 // src/components/GoalSettings.jsx
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
-  Box, Button, Card, CardContent, Typography, Grid, TextField, IconButton, LinearProgress, Dialog, DialogTitle, DialogContent, DialogActions, Chip
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Typography,
+  Grid,
+  TextField,
+  IconButton,
+  LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  CircularProgress
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -12,6 +26,7 @@ import {
   pauseGoalThunk,
   deleteGoalThunk
 } from '../store/goalsSlice';
+
 import ReactMarkdown from 'react-markdown';
 
 const defaultGoal = {
@@ -19,17 +34,19 @@ const defaultGoal = {
   target_amount: '',
   goal_type: 'long_term',
   priority_level: 3,
-  eta_lock: ''
+  eta_lock: 0
 };
 
-const GoalSettings = () => {
+const GoalSettings = (props) => {
   const dispatch = useDispatch();
-  const { goals, loading } = useSelector(state => state.goals);
+  const { goals } = useSelector(state => state.goals);
+  const { ltss } = props;
+  const {virtual_budget_amount: monthlyAmount} = ltss || {}
   const [userId] = useState('mock-user-id'); // Replace with real user id
   const [goalForms, setGoalForms] = useState([{ ...defaultGoal }]);
-  const [monthlyAmount, setMonthlyAmount] = useState('');
   const [aiGoalDialogOpen, setAiGoalDialogOpen] = useState(false);
   const [aiGoalResult, setAiGoalResult] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     dispatch(fetchGoalsData(userId));
@@ -58,23 +75,31 @@ const GoalSettings = () => {
         ...g,
         target_amount: parseFloat(g.target_amount)
       }))
-    }));
+    })).then(() => {
+      dispatch(fetchGoalsData(userId));
+    })
     setGoalForms([{ ...defaultGoal }]);
-    setMonthlyAmount('');
   };
 
   const handleDistributeSaving = () => {
     dispatch(allocateSavingThunk({
       sent_amount: parseFloat(monthlyAmount)
-    }));
+    })).then(() => {
+      dispatch(fetchGoalsData(userId));
+    })
   };
 
   const handlePauseGoal = (goal_id) => {
-    dispatch(pauseGoalThunk({ goal_id }));
+    dispatch(pauseGoalThunk({ goal_id })).then(() => {
+      dispatch(fetchGoalsData(userId));
+    })
   };
 
   const handleDeleteGoal = (goal_id) => {
-    dispatch(deleteGoalThunk({ goal_id }));
+    dispatch(deleteGoalThunk({ goal_id })).then(() => {
+      dispatch(fetchGoalsData(userId));
+    })
+
   };
 
   const getProgress = (goal) => {
@@ -104,9 +129,8 @@ const GoalSettings = () => {
               <TextField
                   fullWidth
                   label="Total Monthly Amount"
-                  type="number"
+                  disabled={true}
                   value={monthlyAmount}
-                  onChange={(e) => setMonthlyAmount(e.target.value)}
               />
             </Grid>
             <Grid item xs={3}>
@@ -124,7 +148,7 @@ const GoalSettings = () => {
                       onChange={(e) => handleGoalChange(index, 'goal_name', e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={2}>
+                <Grid item xs={4}>
                   <TextField
                       fullWidth
                       label="Target"
@@ -155,16 +179,6 @@ const GoalSettings = () => {
                     <option value={1}>Urgent</option>
                   </TextField>
                 </Grid>
-                <Grid item xs={2}>
-                  <TextField
-                      fullWidth
-                      label="Deadline"
-                      type="date"
-                      value={goal.eta_lock}
-                      onChange={(e) => handleGoalChange(index, 'eta_lock', e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
                 <Grid item xs={12}>
                   <Box display="flex" justifyContent="flex-end">
                     <IconButton onClick={() => handleRemoveGoal(index)} color="error">
@@ -189,7 +203,8 @@ const GoalSettings = () => {
                     <Box>
                       <Typography variant="subtitle1" fontWeight="bold">{goal.goal_name}</Typography>
                       <Chip label={goal.goal_type} sx={{ mr: 1 }} />
-                      <Chip label={goal.priority_level === 1? 'Urgent': goal.priority_level === 2? 'Moderate' : 'Low'} color="primary" />
+                      <Chip label={goal.priority_level === 1? 'Urgent': goal.priority_level === 2? 'Moderate' : 'Low'} color="primary" sx={{ mr: 1 }} />
+                      <Chip label={goal.target_date} color="secondary" />
                     </Box>
                     <Box>
                       <IconButton onClick={() => handlePauseGoal(goal.goal_id)} color="warning">
@@ -202,7 +217,8 @@ const GoalSettings = () => {
                   </Box>
                   <Box mt={1}>
                     <Typography variant="body2">Progress: {getProgress(goal).toFixed(1)}%</Typography>
-                    <LinearProgress variant="determinate" value={getProgress(goal)} sx={{ height: 8, borderRadius: 4 }} />
+                    <LinearProgress variant="determinate" value={getProgress(goal)} sx={{height: 8, borderRadius: 4}}/>
+                    <span style={{fontSize: 9}}>{goal.target_date}</span>
                   </Box>
                 </Box>
             ))}
@@ -213,7 +229,8 @@ const GoalSettings = () => {
                 color="secondary"
                 onClick={async () => {
                   try {
-                    const token = localStorage.getItem('token');
+                    const token = localStorage.getItem('token')
+                    setLoading(true)
                     const res = await fetch('/api/v1/ai/goal/coaching', {
                       method: 'POST',
                       headers: {
@@ -224,15 +241,18 @@ const GoalSettings = () => {
                     const data = await res.json();
                     setAiGoalResult(data);
                     setAiGoalDialogOpen(true);
+                    setLoading(false)
                   } catch (err) {
                     setAiGoalResult({ error: 'AI Goal Coaching call failed' });
                     setAiGoalDialogOpen(true);
+                    setLoading(false)
                   }
                 }}
             >
               Demo AI Goal Coaching
             </Button>
           </Box>
+          {loading ? <LinearProgress /> : null}
           <Dialog open={aiGoalDialogOpen} onClose={() => setAiGoalDialogOpen(false)} maxWidth="sm" fullWidth>
             <DialogTitle>AI Goal Coaching Result</DialogTitle>
             <DialogContent>
