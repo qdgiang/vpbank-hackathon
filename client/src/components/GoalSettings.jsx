@@ -50,7 +50,7 @@ const GoalSettings = (props) => {
 
   useEffect(() => {
     dispatch(fetchGoalsData(userId));
-  }, [dispatch, userId]);
+  }, [dispatch, userId, monthlyAmount]);
 
   const handleGoalChange = (index, field, value) => {
     const updated = [...goalForms];
@@ -131,6 +131,8 @@ const GoalSettings = (props) => {
                   label="Total Monthly Amount"
                   disabled={true}
                   value={monthlyAmount}
+                  focused={true}
+                  InputLabelProps={{ shrink: true }}
               />
             </Grid>
             <Grid item xs={3}>
@@ -231,7 +233,8 @@ const GoalSettings = (props) => {
                   try {
                     const token = localStorage.getItem('token')
                     setLoading(true)
-                    const res = await fetch('/api/v1/ai/goal/coaching', {
+                    const baseURL = import.meta.env.VITE_API_URL;
+                    const res = await fetch(`${baseURL}/api/v1/ai/goal/coaching`, {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',

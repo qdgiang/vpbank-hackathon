@@ -311,7 +311,8 @@ const JarSettings = () => {
             try {
               setLoading(true)
               const token = localStorage.getItem('token');
-              const res = await fetch('/api/v1/ai/jar/coaching', {
+              const baseURL = import.meta.env.VITE_API_URL;
+              const res = await fetch(`${baseURL}/api/v1/ai/jar/coaching`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
