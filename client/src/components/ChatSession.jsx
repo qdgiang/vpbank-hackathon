@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
 import { Icon } from '@iconify/react';
 import {
     Typography
@@ -65,7 +64,8 @@ const ChatSession = ({ userId, onLogout }) => {
     // 2. Gọi API lấy trả lời AI
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/v1/qna/session', {
+      const baseURL = import.meta.env.VITE_API_URL;
+      const res = await fetch(`${baseURL}/api/v1/qna/session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

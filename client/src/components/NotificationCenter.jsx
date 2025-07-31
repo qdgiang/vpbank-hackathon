@@ -162,8 +162,9 @@ const NotificationCenter = ({ transactions }) => {
         pagination: { page_size: 20, current: 1 },
         filters: fromDate ? { from_date: fromDate, status: 0 } : { status: 0 }
       };
+      const baseURL = import.meta.env.VITE_API_URL;
 
-      fetch('/api/v1/notification/search', {
+      fetch(`${baseURL}/api/v1/notification/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -282,31 +283,12 @@ const NotificationCenter = ({ transactions }) => {
     return () => { if (el) el.removeEventListener('scroll', handleScroll); };
   }, [viewAllOpen]);
 
-  // Replace onRead and onDelete handlers:
-  const _handleRead = (id) => {
-    // Mark as read via API (only call once)
-    fetch(`/api/v1/notification/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'read' })
-    })
-    .then(res => res.json())
-    .then(() => {
-      // Update local state for polledNotifications
-      setPolledNotifications(prev => prev.map(n => n.notification_id === id ? { ...n, status: 1, read: true } : n));
-      // Update Redux notifications (if present)
-      dispatch(updateNotificationData({ id, data: { status: 1, read: true } }));
-    });          
-  };
-  const handleDelete = (id) => {
-    dispatch(deleteNotificationData(id));
-  };
-
   // Thêm hoặc cập nhật hàm handleReadNotification
   const handleRead = async (id) => {
     const token = localStorage.getItem('token');
     try {
-      await fetch(`/api/v1/notification/${id}/status`, {
+      const baseURL = import.meta.env.VITE_API_URL;
+      await fetch(`${baseURL}/api/v1/notification/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -392,4 +374,4 @@ const NotificationCenter = ({ transactions }) => {
   );
 };
 
-export default NotificationCenter; 
+export default NotificationCenter;
